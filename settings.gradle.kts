@@ -44,3 +44,5 @@ include(":logcatter")
 include(":networkmonitor")
 
 include(":pinger")
+
+include(":xray")
