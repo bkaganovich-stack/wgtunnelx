@@ -38,9 +38,32 @@ base64 -w0 wgtunnelx.jks > wgtunnelx.jks.b64     # macOS: base64 -i wgtunnelx.jk
 
 keytool по умолчанию создаёт хранилище PKCS12: у него пароль ключа совпадает с паролем хранилища, даже если при создании вводился другой. Сборка проверяет секреты до компиляции (`scripts/verify-keystore.sh`) и пишет, какой из них не подходит.
 
-### 4. Токен для слияний (рекомендуется)
+### 4. Токен для слияний `SYNC_TOKEN` (рекомендуется)
 
-Когда апстрим меняет свои файлы в `.github/workflows`, GitHub не даёт `GITHUB_TOKEN` запушить такие коммиты (нужно право `workflows`). Создайте fine-grained токен: *Settings (профиля) → Developer settings → Fine-grained tokens*, доступ только к `wgtunnelx`, права **Contents: Read and write** и **Workflows: Read and write**. Сохраните его как секрет `SYNC_TOKEN`. Без токена слияния работают, пока апстрим не трогает свои воркфлоу.
+**Зачем.** Workflow `x-upstream-release` пушит в `main` коммиты апстрима. Если хотя бы один из них меняет файлы в `.github/workflows` (апстрим правит свои воркфлоу регулярно), GitHub отклонит пуш со встроенным `GITHUB_TOKEN`: для таких коммитов нужно право `workflows`, а выдать его `GITHUB_TOKEN` нельзя. В итоге релиз упадёт на шаге *Push main*, и workflow создаст issue. `SYNC_TOKEN` закрывает эту ситуацию. Пока его нет, workflow пользуется `GITHUB_TOKEN`, и всё работает до первого такого релиза апстрима.
+
+**Создание токена.**
+
+1. Откройте <https://github.com/settings/personal-access-tokens/new> (*аватар → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*).
+2. **Token name:** `wgtunnelx-sync`. **Description:** например, «слияния апстрима WG Tunnel».
+3. **Resource owner:** ваш аккаунт (`bkaganovich-stack`).
+4. **Expiration:** максимальный доступный срок. Запишите дату окончания в календарь: после неё слияния снова начнут зависеть от `GITHUB_TOKEN` (см. «Продление» ниже).
+5. **Repository access:** *Only select repositories* → `wgtunnelx`. Доступ к другим репозиториям токену не нужен.
+6. **Permissions → Repository permissions:**
+   - **Contents:** *Read and write*;
+   - **Workflows:** *Read and write*;
+   - **Metadata:** *Read-only* (GitHub включает его сам).
+
+   Остальные права оставьте *No access*.
+7. Нажмите **Generate token** и сразу скопируйте значение (`github_pat_…`): GitHub показывает его один раз.
+
+**Секрет.** В репозитории `wgtunnelx`: *Settings → Secrets and variables → Actions → Repository secrets → New repository secret*. **Name:** `SYNC_TOKEN`, **Secret:** скопированный токен. Если секрет уже есть, нажмите на карандаш рядом с ним и вставьте новое значение.
+
+**Как проверить.** Отдельной проверки нет: токен используется только при слиянии апстрима. Признак, что всё в порядке, — шаг *Push main* в `x-upstream-release` проходит и для релизов, в которых апстрим менял свои воркфлоу.
+
+**Продление.** Когда срок подходит к концу, GitHub присылает письмо. Откройте токен в *Fine-grained tokens* → **Regenerate token**, затем обновите секрет `SYNC_TOKEN` новым значением. Если срок уже истёк, `x-upstream-release` упадёт на первом же шаге (*checkout*) при выходе нового релиза апстрима, и GitHub пришлёт письмо о неудачном запуске. Issue в этом случае не создаётся, потому что до слияния дело не доходит. После обновления секрета запустите `x-upstream-release` вручную (*Actions → x-upstream-release → Run workflow*).
+
+**Безопасность.** Токен действует только на `wgtunnelx` и только с двумя правами. При утечке отзовите его (*Fine-grained tokens → токен → Delete*) и создайте новый.
 
 ### 5. Первый релиз
 
