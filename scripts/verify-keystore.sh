@@ -10,5 +10,7 @@ fail() { echo "::error::$1 See docs/RELEASING.md"; exit 1; }
 for v in STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
   [ -n "${!v:-}" ] || fail "Signing secret for $v is empty."
 done
+# file type and size of the decoded secret are not sensitive and explain most mistakes
+echo "Decoded KEYSTORE: $(stat -c %s "$KS") bytes, $(file -b "$KS" | cut -c1-60)"
 java "$(dirname "$0")/VerifyKey.java" "$KS" 2>&1 | grep -v '^Picked up JAVA_TOOL_OPTIONS'
 exit "${PIPESTATUS[0]}"

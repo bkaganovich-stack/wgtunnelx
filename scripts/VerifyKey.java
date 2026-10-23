@@ -14,8 +14,11 @@ public class VerifyKey {
         KeyStore ks;
         try {
             ks = KeyStore.getInstance(new File(args[0]), storePass.toCharArray());
-        } catch (Exception e) {
-            fail("SIGNING_STORE_PASSWORD does not open the keystore, or KEYSTORE is not the base64 of a .jks/.p12 file (" + e.getClass().getSimpleName() + ").");
+        } catch (java.security.KeyStoreException e) {
+            fail("KEYSTORE does not decode to a keystore file. It must be the base64 of the .jks/.p12 file itself: base64 -w0 wgtunnelx.jks");
+            return;
+        } catch (java.io.IOException e) {
+            fail("SIGNING_STORE_PASSWORD does not open the keystore.");
             return;
         }
         if (!ks.isKeyEntry(alias)) {
