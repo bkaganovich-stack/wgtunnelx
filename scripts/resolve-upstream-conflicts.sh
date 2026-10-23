@@ -6,7 +6,7 @@
 # Anything else is a real conflict between upstream code and fork changes and is reported.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
-HOOK_FILES=$(python3 -I - <<'PY'
+HOOK_FILES=$(python3 -I -B - <<'PY'
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("hooks", "scripts/apply-hooks.py")
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
@@ -35,7 +35,7 @@ while IFS= read -r path; do
 done < <(git diff --name-only --diff-filter=U)
 
 if [ ${#rehook[@]} -gt 0 ]; then
-  if python3 -I scripts/apply-hooks.py "${rehook[@]}"; then
+  if python3 -I -B scripts/apply-hooks.py "${rehook[@]}"; then
     git add -- "${rehook[@]}"
     printf 'resolved (upstream + fork hooks): %s\n' "${rehook[@]}"
   else

@@ -27,9 +27,9 @@ fi
 
 scripts/prune-upstream-files.sh
 # a clean merge can still lose a hook when upstream rewrites the surrounding code
-if ! python3 -I scripts/apply-hooks.py; then
+if ! python3 -I -B scripts/apply-hooks.py; then
   echo "Fork hooks cannot be applied to upstream $TAG" >&2
-  python3 -I scripts/apply-hooks.py --check | grep -E '^(FAILED|MISSING)' | awk '{print $2}' \
+  python3 -I -B scripts/apply-hooks.py --check | grep -E '^(FAILED|MISSING)' | awk '{print $2}' \
     > "${CONFLICTS_FILE:-/dev/null}" || true
   git reset -q --hard ORIG_HEAD 2>/dev/null || true
   exit 2
