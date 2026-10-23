@@ -45,6 +45,9 @@ $upstream_notes
 </details>
 MD
 
+# annotated tags need an identity even when no earlier step committed anything
+git config user.name >/dev/null || git config user.name "github-actions[bot]"
+git config user.email >/dev/null || git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git tag -a "$VERSION" -m "WG Tunnel X $VERSION (upstream $UPSTREAM)"
 git push origin "refs/tags/$VERSION"
 gh release create "$VERSION" \
