@@ -36,6 +36,8 @@ base64 -w0 wgtunnelx.jks > wgtunnelx.jks.b64     # macOS: base64 -i wgtunnelx.jk
 | `SIGNING_KEY_ALIAS` | `wgtunnelx` |
 | `SIGNING_KEY_PASSWORD` | пароль ключа |
 
+keytool по умолчанию создаёт хранилище PKCS12: у него пароль ключа совпадает с паролем хранилища, даже если при создании вводился другой. Сборка проверяет секреты до компиляции (`scripts/verify-keystore.sh`) и пишет, какой из них не подходит.
+
 ### 4. Токен для слияний (рекомендуется)
 
 Когда апстрим меняет свои файлы в `.github/workflows`, GitHub не даёт `GITHUB_TOKEN` запушить такие коммиты (нужно право `workflows`). Создайте fine-grained токен: *Settings (профиля) → Developer settings → Fine-grained tokens*, доступ только к `wgtunnelx`, права **Contents: Read and write** и **Workflows: Read and write**. Сохраните его как секрет `SYNC_TOKEN`. Без токена слияния работают, пока апстрим не трогает свои воркфлоу.

@@ -54,6 +54,16 @@ runs:
         echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
         echo "KEY_STORE_PATH=$RUNNER_TEMP/ks/release.jks" >> "$GITHUB_ENV"
 
+    - name: Verify signing key
+      # fails in seconds with a clear message instead of at the end of the release build
+      if: inputs.build-type == 'release'
+      shell: bash
+      env:
+        STORE_PASSWORD: ${{ inputs.store-password }}
+        KEY_ALIAS: ${{ inputs.key-alias }}
+        KEY_PASSWORD: ${{ inputs.key-password }}
+      run: scripts/verify-keystore.sh "$KEY_STORE_PATH"
+
     - name: Unit tests
       shell: bash
       run: ./gradlew --no-configuration-cache :xray:testDebugUnitTest
