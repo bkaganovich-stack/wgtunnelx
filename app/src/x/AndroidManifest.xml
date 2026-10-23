@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WG Tunnel X manifest overlay, merged into every variant by app/wgtunnelx.gradle -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="com.zaneschepke.wireguardautotunnel.xray.ui.RoutingActivity"
+            android:exported="false"
+            android:label="@string/x_routing"
+            android:theme="@style/Theme.WireguardAutoTunnel"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+</manifest>

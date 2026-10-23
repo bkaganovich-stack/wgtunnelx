@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="x_routing">Маршрутизация по доменам (Xray)</string>
+    <string name="x_routing_desc_off">Выключена: весь трафик идёт по AllowedIPs туннеля</string>
+    <string name="x_routing_desc_on">Включена · правил: %1$d · по умолчанию: %2$s</string>
+    <string name="x_routing_intro">Xray-core для каждого соединения решает, куда отправить трафик: по домену (из TLS, HTTP и QUIC), категории geosite/geoip, IP, порту, протоколу или приложению. Работает в режиме VPN: туннель запускается в пространстве пользователя, а VPN-интерфейсом управляет Xray.</string>
+    <string name="x_enable_routing">Включить маршрутизацию</string>
+    <string name="x_requires_vpn_mode">Маршрутизация работает только в режиме VPN. Сейчас выбран режим: %1$s</string>
+    <string name="x_status">Состояние</string>
+    <string name="x_status_stopped">Не запущена</string>
+    <string name="x_status_starting">Запуск…</string>
+    <string name="x_status_running">Работает · Xray %1$s</string>
+    <string name="x_status_failed">Ошибка: %1$s</string>
+    <string name="x_status_revoked">Остановлена Android (запущен другой VPN)</string>
+    <string name="x_traffic">Туннель ↑%1$s ↓%2$s · Напрямую ↑%3$s ↓%4$s · Заблокировано %5$s</string>
+    <string name="x_apply_restart">Изменения применятся при следующем запуске туннеля</string>
+    <string name="x_restart_now">Перезапустить туннель</string>
+
+    <string name="x_default_route">Трафик без подходящего правила</string>
+    <string name="x_target_tunnel">Туннель</string>
+    <string name="x_target_direct">Напрямую</string>
+    <string name="x_target_block">Блокировать</string>
+
+    <string name="x_rules">Правила</string>
+    <string name="x_rules_hint">Проверяются сверху вниз, срабатывает первое совпадение.</string>
+    <string name="x_add_rule">Добавить правило</string>
+    <string name="x_presets">Шаблоны</string>
+    <string name="x_preset_replace_warning">Шаблон заменит текущие правила и маршрут по умолчанию.</string>
+    <string name="x_preset_RUSSIA_DIRECT">Россия: российские сайты напрямую, остальное через туннель</string>
+    <string name="x_preset_RUSSIA_BLOCKED_ONLY">Россия: через туннель только заблокированное и популярные зарубежные сервисы (базы runetfreedom)</string>
+    <string name="x_preset_TUNNEL_ALL_BLOCK_ADS">Всё через туннель, реклама блокируется</string>
+    <string name="x_preset_DIRECT_ALL_EXCEPT_LISTED">Напрямую, через туннель только указанные сервисы</string>
+    <string name="x_import">Импорт</string>
+    <string name="x_export">Экспорт</string>
+    <string name="x_import_hint">Вставьте правила: custom routing из v2rayNG, конфиг Xray или массив routing.rules.</string>
+    <string name="x_import_append">Добавить</string>
+    <string name="x_import_replace">Заменить</string>
+    <string name="x_imported">Импортировано правил: %1$d, пропущено: %2$d</string>
+    <string name="x_copied">Скопировано в буфер обмена</string>
+    <string name="x_no_rules">Правил нет: весь трафик идёт по маршруту по умолчанию.</string>
+    <string name="x_move_up">Выше</string>
+    <string name="x_move_down">Ниже</string>
+
+    <string name="x_rule">Правило</string>
+    <string name="x_rule_name">Название</string>
+    <string name="x_rule_target">Действие</string>
+    <string name="x_rule_domains">Домены</string>
+    <string name="x_rule_domains_hint">По одному в строке: geosite:youtube, domain:example.com, full:www.example.com, keyword:google, regexp:\\.ru$</string>
+    <string name="x_rule_ips">IP-адреса</string>
+    <string name="x_rule_ips_hint">По одному в строке: geoip:ru, 10.0.0.0/8, 1.1.1.1</string>
+    <string name="x_rule_ports">Порты</string>
+    <string name="x_rule_ports_hint">53,443,1000-2000</string>
+    <string name="x_rule_network">Сеть</string>
+    <string name="x_rule_any">Любая</string>
+    <string name="x_rule_protocols">Определённые протоколы</string>
+    <string name="x_rule_apps">Приложения</string>
+    <string name="x_rule_apps_none">Любое приложение</string>
+    <string name="x_rule_apps_hint">Правила по приложениям работают на Android 10 и новее.</string>
+    <string name="x_rule_select_apps">Выбрать приложения</string>
+    <string name="x_search">Поиск</string>
+    <string name="x_rule_empty">В правиле должно быть хотя бы одно условие</string>
+    <string name="x_delete">Удалить</string>
+    <string name="x_save">Сохранить</string>
+    <string name="x_cancel">Отмена</string>
+    <string name="x_suggestions">Категории</string>
+
+    <string name="x_tunnels">Туннели</string>
+    <string name="x_tunnels_hint">Туннели с маршрутизацией. Остальные запускаются в обычном режиме VPN.</string>
+
+    <string name="x_geo">Гео-базы</string>
+    <string name="x_geo_source">Источник</string>
+    <string name="x_geo_source_runetfreedom">runetfreedom (v2fly + списки блокировок РФ)</string>
+    <string name="x_geo_source_loyalsoldier">Loyalsoldier</string>
+    <string name="x_geo_source_v2fly">v2fly</string>
+    <string name="x_geo_source_custom">Свои ссылки</string>
+    <string name="x_geo_missing">%1$s: не загружен</string>
+    <string name="x_geo_info">%1$s: %2$s, категорий: %3$d, %4$s</string>
+    <string name="x_geo_update">Обновить сейчас</string>
+    <string name="x_geo_updated">Гео-базы обновлены</string>
+    <string name="x_geo_downloading">Загрузка %1$s…</string>
+    <string name="x_geo_auto">Автообновление</string>
+    <string name="x_geo_auto_off">Выключено</string>
+    <string name="x_geo_auto_days">Раз в %1$d дн.</string>
+
+    <string name="x_dns">DNS</string>
+    <string name="x_dns_remote">DNS через туннель</string>
+    <string name="x_dns_remote_hint">tunnel = DNS из конфига WireGuard. Также 1.1.1.1, tcp://1.1.1.1, https://1.1.1.1/dns-query</string>
+    <string name="x_dns_direct">DNS для прямого трафика</string>
+    <string name="x_dns_direct_hint">localhost = системный DNS текущей сети Android</string>
+    <string name="x_fake_dns">Fake DNS</string>
+    <string name="x_fake_dns_desc">Отвечать фиктивными IP, чтобы маршрутизация по доменам работала и для приложений с жёстко заданными IP. Без необходимости не включайте.</string>
+
+    <string name="x_advanced">Дополнительно</string>
+    <string name="x_sniffing">Сниффинг</string>
+    <string name="x_sniffing_desc">Определять домен из TLS SNI, HTTP Host и QUIC. Нужен для правил по доменам.</string>
+    <string name="x_bypass_lan">Локальная сеть напрямую</string>
+    <string name="x_bypass_lan_desc">Частные и link-local сети идут напрямую, кроме сетей самого туннеля.</string>
+    <string name="x_domain_strategy">Стратегия доменов</string>
+    <string name="x_log_level">Уровень логов Xray</string>
+    <string name="x_custom_config">Свой конфиг Xray</string>
+    <string name="x_custom_config_desc">Полный JSON Xray вместо сгенерированного. Подстановки: {{SOCKS_PORT}}, {{SOCKS_USER}}, {{SOCKS_PASS}}. Нужен inbound tun.</string>
+    <string name="x_edit_config">Редактировать конфиг</string>
+    <string name="x_view_config">Показать сгенерированный конфиг</string>
+    <string name="x_use_generated">Загрузить сгенерированный</string>
+
+    <string name="x_problems">Перед запуском исправьте:</string>
+    <string name="x_problem_missing">%1$s: %2$s не загружен</string>
+    <string name="x_problem_category">%1$s: категории «%2$s» нет в %3$s</string>
+    <string name="x_problem_invalid">%1$s: неверное значение %2$s «%3$s»</string>
+    <string name="x_back">Назад</string>
+    <string name="x_copy">Копировать</string>
+    <string name="x_share">Поделиться</string>
+</resources>

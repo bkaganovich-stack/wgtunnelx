@@ -29,6 +29,7 @@ import com.zaneschepke.wireguardautotunnel.di.workerModule
 import com.zaneschepke.wireguardautotunnel.notification.NotificationService
 import com.zaneschepke.wireguardautotunnel.util.Constants
 import com.zaneschepke.wireguardautotunnel.util.ReleaseTree
+import com.zaneschepke.wireguardautotunnel.xray.xrayModule
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -91,6 +92,7 @@ class WireGuardAutoTunnel : Application(), KoinComponent {
                 tunnelBackendProviderModule,
                 workerModule,
                 coordinatorModule,
+                xrayModule,
             )
             options(viewModelScopeFactory())
             lazyModules(networkModule)

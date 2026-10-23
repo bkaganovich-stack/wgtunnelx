@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WG Tunnel X strings. Kept in the fork-only resource set (app/src/x/res). -->
+<resources>
+    <string name="x_routing">Domain routing (Xray)</string>
+    <string name="x_routing_desc_off">Off: all traffic follows the tunnel AllowedIPs</string>
+    <string name="x_routing_desc_on">On · %1$d rules · default: %2$s</string>
+    <string name="x_routing_intro">Xray-core decides per connection where traffic goes: by domain (sniffed from TLS, HTTP and QUIC), geosite/geoip category, IP, port, protocol or app. Works in VPN mode; the tunnel runs in userspace and Xray owns the VPN interface.</string>
+    <string name="x_enable_routing">Enable routing</string>
+    <string name="x_requires_vpn_mode">Routing applies only in VPN mode. Current mode: %1$s</string>
+    <string name="x_status">Status</string>
+    <string name="x_status_stopped">Not running</string>
+    <string name="x_status_starting">Starting…</string>
+    <string name="x_status_running">Running · Xray %1$s</string>
+    <string name="x_status_failed">Failed: %1$s</string>
+    <string name="x_status_revoked">Stopped by Android (another VPN took over)</string>
+    <string name="x_traffic">Tunnel ↑%1$s ↓%2$s · Direct ↑%3$s ↓%4$s · Blocked %5$s</string>
+    <string name="x_apply_restart">Changes apply on the next tunnel start</string>
+    <string name="x_restart_now">Restart tunnel</string>
+
+    <string name="x_default_route">Traffic not matched by rules</string>
+    <string name="x_target_tunnel">Tunnel</string>
+    <string name="x_target_direct">Direct</string>
+    <string name="x_target_block">Block</string>
+
+    <string name="x_rules">Rules</string>
+    <string name="x_rules_hint">Checked top to bottom, the first match wins.</string>
+    <string name="x_add_rule">Add rule</string>
+    <string name="x_presets">Presets</string>
+    <string name="x_preset_replace_warning">The preset replaces your current rules and default route.</string>
+    <string name="x_preset_RUSSIA_DIRECT">Russia: Russian sites direct, everything else through the tunnel</string>
+    <string name="x_preset_RUSSIA_BLOCKED_ONLY">Russia: only blocked sites and popular foreign services through the tunnel (runetfreedom databases)</string>
+    <string name="x_preset_TUNNEL_ALL_BLOCK_ADS">Everything through the tunnel, block ads</string>
+    <string name="x_preset_DIRECT_ALL_EXCEPT_LISTED">Direct, only listed services through the tunnel</string>
+    <string name="x_import">Import</string>
+    <string name="x_export">Export</string>
+    <string name="x_import_hint">Paste rules: v2rayNG custom routing, an Xray config or an Xray routing.rules array.</string>
+    <string name="x_import_append">Append</string>
+    <string name="x_import_replace">Replace</string>
+    <string name="x_imported">Imported %1$d rules, skipped %2$d</string>
+    <string name="x_copied">Copied to clipboard</string>
+    <string name="x_no_rules">No rules: everything follows the default route.</string>
+    <string name="x_move_up">Move up</string>
+    <string name="x_move_down">Move down</string>
+
+    <string name="x_rule">Rule</string>
+    <string name="x_rule_name">Name</string>
+    <string name="x_rule_target">Action</string>
+    <string name="x_rule_domains">Domains</string>
+    <string name="x_rule_domains_hint">One per line: geosite:youtube, domain:example.com, full:www.example.com, keyword:google, regexp:\\.ru$</string>
+    <string name="x_rule_ips">IP addresses</string>
+    <string name="x_rule_ips_hint">One per line: geoip:ru, 10.0.0.0/8, 1.1.1.1</string>
+    <string name="x_rule_ports">Ports</string>
+    <string name="x_rule_ports_hint">53,443,1000-2000</string>
+    <string name="x_rule_network">Network</string>
+    <string name="x_rule_any">Any</string>
+    <string name="x_rule_protocols">Sniffed protocols</string>
+    <string name="x_rule_apps">Apps</string>
+    <string name="x_rule_apps_none">Any app</string>
+    <string name="x_rule_apps_hint">Matching apps needs Android 10+.</string>
+    <string name="x_rule_select_apps">Select apps</string>
+    <string name="x_search">Search</string>
+    <string name="x_rule_empty">A rule needs at least one condition</string>
+    <string name="x_delete">Delete</string>
+    <string name="x_save">Save</string>
+    <string name="x_cancel">Cancel</string>
+    <string name="x_suggestions">Categories</string>
+
+    <string name="x_tunnels">Tunnels</string>
+    <string name="x_tunnels_hint">Tunnels that use routing. The others start in the regular VPN mode.</string>
+
+    <string name="x_geo">Geo databases</string>
+    <string name="x_geo_source">Source</string>
+    <string name="x_geo_source_runetfreedom">runetfreedom (v2fly + Russian block lists)</string>
+    <string name="x_geo_source_loyalsoldier">Loyalsoldier</string>
+    <string name="x_geo_source_v2fly">v2fly</string>
+    <string name="x_geo_source_custom">Custom URLs</string>
+    <string name="x_geo_missing">%1$s: not downloaded</string>
+    <string name="x_geo_info">%1$s: %2$s, %3$d categories, %4$s</string>
+    <string name="x_geo_update">Update now</string>
+    <string name="x_geo_updated">Geo databases updated</string>
+    <string name="x_geo_downloading">Downloading %1$s…</string>
+    <string name="x_geo_auto">Auto update</string>
+    <string name="x_geo_auto_off">Off</string>
+    <string name="x_geo_auto_days">Every %1$d days</string>
+
+    <string name="x_dns">DNS</string>
+    <string name="x_dns_remote">DNS through the tunnel</string>
+    <string name="x_dns_remote_hint">tunnel = DNS from the WireGuard config. Also 1.1.1.1, tcp://1.1.1.1, https://1.1.1.1/dns-query</string>
+    <string name="x_dns_direct">DNS for direct traffic</string>
+    <string name="x_dns_direct_hint">localhost = Android system resolver of the current network</string>
+    <string name="x_fake_dns">Fake DNS</string>
+    <string name="x_fake_dns_desc">Answer with fake IPs so routing by domain also works for apps that pin IPs. Keep off unless needed.</string>
+
+    <string name="x_advanced">Advanced</string>
+    <string name="x_sniffing">Sniffing</string>
+    <string name="x_sniffing_desc">Read the domain from TLS SNI, HTTP Host and QUIC. Required for domain rules.</string>
+    <string name="x_bypass_lan">Bypass LAN</string>
+    <string name="x_bypass_lan_desc">Private and link-local networks go direct, except networks that belong to the tunnel.</string>
+    <string name="x_domain_strategy">Domain strategy</string>
+    <string name="x_log_level">Xray log level</string>
+    <string name="x_custom_config">Custom Xray config</string>
+    <string name="x_custom_config_desc">Use a complete Xray JSON instead of the generated one. Placeholders: {{SOCKS_PORT}}, {{SOCKS_USER}}, {{SOCKS_PASS}}. Needs a tun inbound.</string>
+    <string name="x_edit_config">Edit config</string>
+    <string name="x_view_config">View generated config</string>
+    <string name="x_use_generated">Load generated</string>
+
+    <string name="x_problems">Fix before starting:</string>
+    <string name="x_problem_missing">%1$s: %2$s is not downloaded</string>
+    <string name="x_problem_category">%1$s: \"%2$s\" is not in %3$s</string>
+    <string name="x_problem_invalid">%1$s: invalid %2$s \"%3$s\"</string>
+    <string name="x_back">Back</string>
+    <string name="x_copy">Copy</string>
+    <string name="x_share">Share</string>
+</resources>

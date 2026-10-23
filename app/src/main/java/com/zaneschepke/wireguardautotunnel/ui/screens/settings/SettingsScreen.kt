@@ -64,6 +64,7 @@ import com.zaneschepke.wireguardautotunnel.util.extensions.asTitleString
 import com.zaneschepke.wireguardautotunnel.util.extensions.capitalize
 import com.zaneschepke.wireguardautotunnel.viewmodel.SettingsViewModel
 import com.zaneschepke.wireguardautotunnel.viewmodel.SharedAppViewModel
+import com.zaneschepke.wireguardautotunnel.xray.ui.XrayRoutingSettingsRow
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.viewmodel.koinActivityViewModel
 import org.orbitmvi.orbit.compose.collectAsState
@@ -208,6 +209,7 @@ fun SettingsScreen(
                 },
                 modifier = Modifier.focusRequester(focusRequester),
             )
+            XrayRoutingSettingsRow()
             SurfaceRow(
                 leading = {
                     Icon(
