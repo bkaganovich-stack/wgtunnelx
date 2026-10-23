@@ -1,0 +1,32 @@
+name: x-ci
+# Build and test on every push and pull request.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: build
+        uses: ./.github/actions/build-x
+        with:
+          build-type: debug
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wgtunnelx-debug
+          path: ${{ steps.build.outputs.apk-dir }}/*.apk
+          retention-days: 7

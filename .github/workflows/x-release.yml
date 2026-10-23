@@ -1,0 +1,55 @@
+name: x-release
+# Manual release of fork-only changes on top of the current upstream version:
+# bumps xRevision (5.8.3-x.1 -> 5.8.3-x.2), builds signed APKs and publishes them.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Increase xRevision before building
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: x-upstream-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump revision
+        if: inputs.bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rev=$(sed -nE 's/^xRevision=([0-9]+)$/\1/p' wgtunnelx.properties)
+          sed -i "s/^xRevision=.*/xRevision=$((rev + 1))/" wgtunnelx.properties
+          git commit -am "chore(x): xRevision $((rev + 1))"
+
+      - name: Build
+        id: build
+        uses: ./.github/actions/build-x
+        with:
+          build-type: release
+          keystore-base64: ${{ secrets.KEYSTORE }}
+          store-password: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          key-alias: ${{ secrets.SIGNING_KEY_ALIAS }}
+          key-password: ${{ secrets.SIGNING_KEY_PASSWORD }}
+
+      - name: Publish
+        run: |
+          git push origin HEAD:main
+          upstream=$(sed -nE 's/^versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' gradle/libs.versions.toml)
+          scripts/publish-release.sh "${{ steps.build.outputs.apk-dir }}" \
+            "${{ steps.build.outputs.version-name }}" "$upstream" "${{ steps.build.outputs.xray-version }}"

@@ -1,0 +1,54 @@
+name: x-update-xray
+# Weekly: moves xray/libxray.version to the newest 2dust/AndroidLibXrayLite (Xray-core) release
+# after the tests and the Xray config validation pass. Shipped with the next release.
+
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: x-update-xray
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Check for a new libXray release
+        id: check
+        run: |
+          latest=$(gh api repos/2dust/AndroidLibXrayLite/releases/latest --jq '.tag_name')
+          current=$(tr -d '[:space:]' < xray/libxray.version)
+          echo "latest=$latest current=$current" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$latest" = "$current" ]; then echo "update=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          curl -fsSL -o "$RUNNER_TEMP/libv2ray.aar" \
+            "https://github.com/2dust/AndroidLibXrayLite/releases/download/$latest/libv2ray.aar"
+          echo "$latest" > xray/libxray.version
+          sha256sum "$RUNNER_TEMP/libv2ray.aar" | cut -d' ' -f1 > xray/libxray.sha256
+          echo "update=true" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build and validate
+        if: steps.check.outputs.update == 'true'
+        uses: ./.github/actions/build-x
+        with:
+          build-type: debug
+
+      - name: Commit
+        if: steps.check.outputs.update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add xray/libxray.version xray/libxray.sha256
+          git commit -m "chore(x): Xray-core ${{ steps.check.outputs.latest }}"
+          git push origin HEAD:main

@@ -1,0 +1,97 @@
+name: Build WG Tunnel X
+description: >-
+  Tests the routing module, validates generated Xray configs against a real Xray-core build and
+  assembles the standalone APKs (signed when a keystore is given).
+
+inputs:
+  build-type:
+    description: release or debug
+    default: release
+  keystore-base64:
+    description: Base64 of the release keystore (required for release)
+    default: ""
+  store-password:
+    default: ""
+  key-alias:
+    default: ""
+  key-password:
+    default: ""
+
+outputs:
+  apk-dir:
+    description: Directory with the produced APKs
+    value: ${{ steps.collect.outputs.dir }}
+  version-name:
+    value: ${{ steps.collect.outputs.version_name }}
+  xray-version:
+    value: ${{ steps.collect.outputs.xray_version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read JDK version
+      id: jdk
+      shell: bash
+      run: echo "version=$(sed -nE 's/^jdk[[:space:]]*=[[:space:]]*"([0-9]+)".*/\1/p' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: ${{ steps.jdk.outputs.version }}
+        cache: gradle
+
+    - name: Keystore
+      if: inputs.build-type == 'release'
+      shell: bash
+      env:
+        KEYSTORE: ${{ inputs.keystore-base64 }}
+      run: |
+        if [ -z "$KEYSTORE" ]; then
+          echo "::error::Release signing secrets are missing (KEYSTORE, SIGNING_*). See docs/RELEASING.md"
+          exit 1
+        fi
+        mkdir -p "$RUNNER_TEMP/ks"
+        echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
+        echo "KEY_STORE_PATH=$RUNNER_TEMP/ks/release.jks" >> "$GITHUB_ENV"
+
+    - name: Unit tests
+      shell: bash
+      run: ./gradlew --no-configuration-cache :xray:testDebugUnitTest
+
+    - name: Validate generated configs with Xray-core
+      shell: bash
+      run: |
+        XRAY_TAG=$(tr -d '[:space:]' < xray/libxray.version)
+        mkdir -p "$RUNNER_TEMP/xray" "$RUNNER_TEMP/geo"
+        curl -fsSL -o "$RUNNER_TEMP/xray.zip" "https://github.com/XTLS/Xray-core/releases/download/${XRAY_TAG}/Xray-linux-64.zip"
+        unzip -q -o "$RUNNER_TEMP/xray.zip" -d "$RUNNER_TEMP/xray"
+        for f in geoip.dat geosite.dat; do
+          curl -fsSL -o "$RUNNER_TEMP/geo/$f" "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/$f"
+        done
+        scripts/validate-xray-configs.sh "$RUNNER_TEMP/xray/xray" "$RUNNER_TEMP/geo"
+
+    - name: Assemble
+      shell: bash
+      env:
+        SIGNING_STORE_PASSWORD: ${{ inputs.store-password }}
+        SIGNING_KEY_ALIAS: ${{ inputs.key-alias }}
+        SIGNING_KEY_PASSWORD: ${{ inputs.key-password }}
+      run: |
+        if [ "${{ inputs.build-type }}" = release ]; then
+          ./gradlew :app:assembleStandaloneRelease
+        else
+          ./gradlew -PnoSplits :app:assembleStandaloneDebug
+        fi
+
+    - name: Collect
+      id: collect
+      shell: bash
+      run: |
+        dir="$RUNNER_TEMP/apk"
+        mkdir -p "$dir"
+        find app/build/outputs/apk/standalone -name '*.apk' -exec cp {} "$dir/" \;
+        ls -la "$dir"
+        version_name=$(ls "$dir" | head -1 | sed -E 's/^wgtunnel-standalone-v(.*)\.apk$/\1/; s/-(arm64|armv7|x64|x86)$//')
+        echo "dir=$dir" >> "$GITHUB_OUTPUT"
+        echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+        echo "xray_version=$(tr -d '[:space:]' < xray/libxray.version)" >> "$GITHUB_OUTPUT"

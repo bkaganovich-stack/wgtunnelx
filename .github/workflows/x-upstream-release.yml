@@ -1,0 +1,150 @@
+name: x-upstream-release
+# Polls wgtunnel/android for a new stable release. When one appears, merges it into main,
+# runs the tests, builds signed APKs and publishes the matching WG Tunnel X release.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Upstream tag (empty = latest stable release)
+        required: false
+      force:
+        description: Build even if a WG Tunnel X release for this upstream version exists
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: x-upstream-release
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: wgtunnel/android
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - name: Find latest stable upstream release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.upstream_tag }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_TAG:-}" ]; then
+            tag="$INPUT_TAG"
+          else
+            # /releases/latest never returns drafts or pre-releases
+            tag=$(gh api "repos/$UPSTREAM_REPO/releases/latest" --jq '.tag_name')
+          fi
+          read -r draft prerelease < <(gh api "repos/$UPSTREAM_REPO/releases/tags/$tag" --jq '"\(.draft) \(.prerelease)"')
+          release=true
+          if ! [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "$draft" = true ] || [ "$prerelease" = true ]; then
+            echo "Upstream $tag is not a stable release"; release=false
+          fi
+          existing=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName \
+            --jq "[.[] | select(.tagName | startswith(\"$tag-x.\"))] | length")
+          if [ "$existing" != 0 ] && [ "${FORCE:-false}" != true ]; then
+            echo "WG Tunnel X for upstream $tag already released"; release=false
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "upstream=$tag release=$release" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep scheduled workflows enabled
+        # GitHub disables schedules after 60 days without repository activity
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%H)" = "03" ] && [ "$(date -u +%M)" -lt 15 ]; then
+            for wf in x-upstream-release.yml x-update-xray.yml; do
+              gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
+            done
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          # A token with the "workflows" permission is needed whenever upstream commits touch
+          # .github/workflows; GITHUB_TOKEN is used when SYNC_TOKEN is not configured.
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge upstream ${{ env.TAG }}
+        id: merge
+        run: |
+          set +e
+          CONFLICTS_FILE="$RUNNER_TEMP/conflicts.txt" scripts/upstream-sync.sh "$TAG"
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Report merge conflicts
+        if: failure() && steps.merge.outputs.code == '2'
+        run: |
+          title="Upstream $TAG needs a manual merge"
+          if [ "$(gh issue list --state open --search "$title in:title" --json number --jq length)" = 0 ]; then
+            {
+              echo "Automatic merge of [WG Tunnel $TAG](https://github.com/$UPSTREAM_REPO/releases/tag/$TAG) stopped on conflicts in fork-modified files:"
+              echo; sed 's/^/- `/; s/$/`/' "$RUNNER_TEMP/conflicts.txt"; echo
+              echo "Resolve locally, then re-run the workflow:"
+              echo '```sh'
+              echo "git fetch https://github.com/$UPSTREAM_REPO.git tag $TAG"
+              echo "git merge $TAG    # fix conflicts, commit, push to main"
+              echo '```'
+              echo "Then run **x-upstream-release** manually. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            } > "$RUNNER_TEMP/issue.md"
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/issue.md"
+          fi
+
+      - name: Build
+        id: build
+        uses: ./.github/actions/build-x
+        with:
+          build-type: release
+          keystore-base64: ${{ secrets.KEYSTORE }}
+          store-password: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          key-alias: ${{ secrets.SIGNING_KEY_ALIAS }}
+          key-password: ${{ secrets.SIGNING_KEY_PASSWORD }}
+
+      - name: Push main
+        run: git push origin HEAD:main
+
+      - name: Publish release
+        run: |
+          scripts/publish-release.sh "${{ steps.build.outputs.apk-dir }}" \
+            "${{ steps.build.outputs.version-name }}" "$TAG" "${{ steps.build.outputs.xray-version }}"
+
+      - name: Report failure
+        if: failure() && steps.merge.outputs.code == '0'
+        run: |
+          title="WG Tunnel X build for upstream $TAG failed"
+          if [ "$(gh issue list --state open --search "$title in:title" --json number --jq length)" = 0 ]; then
+            gh issue create --title "$title" \
+              --body "The upstream merge succeeded but building or publishing failed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi

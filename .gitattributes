@@ -1,0 +1,4 @@
+# WG Tunnel X: files the fork owns even though upstream has them too. On a merge where both
+# sides changed them, keep the fork version (needs `git config merge.ours.driver true`, set by
+# scripts/upstream-sync.sh).
+README.md merge=ours
