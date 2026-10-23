@@ -1,0 +1,49 @@
+// WG Tunnel X build customizations.
+//
+// Applied from the last line of app/build.gradle.kts so the upstream build script stays untouched
+// apart from that line, which keeps upstream merges conflict free. Groovy is used on purpose:
+// script plugins cannot see AGP types at compile time, Groovy resolves them at runtime.
+
+def x = new Properties()
+rootProject.file("wgtunnelx.properties").withInputStream { x.load(it) }
+def xAppId = x.getProperty("applicationId")
+def xAppName = x.getProperty("appName")
+def xAuthority = x.getProperty("providerAuthority")
+def xRevision = x.getProperty("xRevision").toInteger()
+def (xOwner, xRepo) = x.getProperty("updateRepository").split("/")
+assert xRevision >= 0 && xRevision <= 99: "xRevision must be 0..99"
+
+androidComponents {
+    finalizeDsl { android ->
+        def dc = android.defaultConfig
+        def upstreamName = dc.versionName
+        def upstreamCode = dc.versionCode
+        dc.applicationId = xAppId
+        dc.versionName = "${upstreamName}-x.${xRevision}"
+        dc.versionCode = upstreamCode * 100 + xRevision
+        dc.buildConfigField("String", "UPSTREAM_VERSION_NAME", "\"${upstreamName}\"")
+        dc.buildConfigField("String", "X_UPDATE_OWNER", "\"${xOwner}\"")
+        dc.buildConfigField("String", "X_UPDATE_REPO", "\"${xRepo}\"")
+
+        android.buildTypes.each { type ->
+            def suffix = type.name == "release" ? "" : ".${type.name}"
+            def label = type.name == "release" ? xAppName : "${xAppName} ${type.name.capitalize()}"
+            // must differ from upstream, or both apps cannot be installed side by side
+            type.manifestPlaceholders["providerAuthority"] = "${xAuthority}${suffix}".toString()
+            type.buildConfigField("String", "FILE_PROVIDER_AUTHORITY", "\"${xAuthority}${suffix}\"")
+            type.resValue("string", "app_name", label.toString())
+        }
+
+        // libv2ray.aar ships geo files; WG Tunnel X downloads them at runtime (GeoDataManager)
+        android.androidResources.ignoreAssetsPattern =
+            "!geoip.dat:!geosite.dat:!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+
+    onVariants(selector().all()) { variant ->
+        // X branding (icons, banner) overrides upstream and nightly resources
+        variant.sources.res?.addStaticSourceDirectory("src/x/res")
+        variant.sources.manifests.addStaticManifestFile("src/x/AndroidManifest.xml")
+    }
+}
+
+dependencies { implementation(project(":xray")) }

@@ -294,3 +294,5 @@ tasks.configureEach {
         enabled = false
     }
 }
+
+apply(from = "wgtunnelx.gradle")
