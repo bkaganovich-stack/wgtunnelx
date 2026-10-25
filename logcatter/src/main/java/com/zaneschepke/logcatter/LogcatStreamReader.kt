@@ -18,7 +18,6 @@ class LogcatStreamReader(pid: Int, private val fileManager: LogFileManager) {
     private val command = buildString {
         append("logcat")
         append(" -v epoch")
-        append(" --pid=$pid")
         append(" -b main -b crash")
         append(" -T 300")
     }

@@ -53,7 +53,7 @@ class RoutingTunnelProvider(
         routing.engine.alwaysOnHandler = { RuntimeManager.alwaysOnCallback?.alwaysOnTriggered() }
         routing.engine.revokeHandler = { id ->
             scope.launch {
-                Timber.w("Routing VPN revoked, stopping tunnel %s", id)
+                Timber.w("Routing ended on its own (revoke or crash), stopping tunnel %s", id)
                 if (id != null) stopTunnel(id) else stopActiveTunnels()
             }
         }
@@ -83,7 +83,9 @@ class RoutingTunnelProvider(
         outerConfig: Config?,
     ): Result<Unit> = mutex.withLock {
         val settings = routing.store.current
-        if (mode !is BackendMode.Vpn || !settings.appliesTo(tunnel.id)) {
+        val routed = mode is BackendMode.Vpn && settings.appliesTo(tunnel.id)
+        Timber.i("Starting tunnel %d (%s), routing=%s", tunnel.id, mode::class.simpleName, routed)
+        if (mode !is BackendMode.Vpn || !routed) {
             stopRoutingLocked()
             return@withLock delegate.startTunnel(tunnel, mode, tunnelDnsConfig, outerConfig)
         }
@@ -155,16 +157,18 @@ class RoutingTunnelProvider(
     }
 
     override suspend fun stopTunnel(tunnelId: Int): Result<Unit> = mutex.withLock {
+        Timber.i("Stopping tunnel %d", tunnelId)
         if (routedTunnelId == tunnelId) stopRoutingLocked()
         delegate.stopTunnel(tunnelId)
     }
 
     override suspend fun stopActiveTunnels(): Result<Unit> = mutex.withLock {
+        Timber.i("Stopping all tunnels")
         stopRoutingLocked()
         delegate.stopActiveTunnels()
     }
 
-    private fun stopRoutingLocked() {
+    private suspend fun stopRoutingLocked() {
         if (routing.engine.isActive || routedTunnelId != null) routing.engine.stop()
         routedTunnelId = null
     }

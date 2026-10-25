@@ -52,6 +52,7 @@ def hook_settings(text):
 
 
 def hook_application(text):
+    text = hook_application_process(text)
     text = add_import(text, "com.zaneschepke.wireguardautotunnel.xray.xrayModule")
     if re.search(r"^\s*xrayModule,\s*$", text, re.M):
         return text
@@ -65,6 +66,46 @@ def hook_application(text):
         body += ","
     new = f"modules({body}\n{pad}xrayModule,{m.group('indent')})"
     return text[: m.start()] + new + text[m.end() :]
+
+
+def insert_after(text, anchor_re, line, what):
+    """Puts `line` right after the line matching `anchor_re`, with the same indentation."""
+    m = re.search(anchor_re, text, re.M)
+    if not m:
+        raise HookError(f"{what} not found")
+    indent = re.match(r"[ \t]*", text[text.rfind("\n", 0, m.start()) + 1 :]).group(0)
+    end = text.index("\n", m.end()) + 1
+    return text[:end] + f"{indent}{line}\n" + text[end:]
+
+
+def hook_application_process(text):
+    # the :xray process (Xray-core only) must skip the app startup, see XrayProcess
+    text = add_import(text, "com.wgtunnelx.xray.XrayProcess")
+    if "XrayProcess.isolate(this)" not in text:
+        text = insert_after(
+            text,
+            r"^\s*super\.onCreate\(\)\s*$",
+            "if (XrayProcess.isolate(this)) return",
+            "super.onCreate() in Application.onCreate",
+        )
+    if "XrayProcess.isXray(this)" not in text and "super.onTrimMemory(level)" in text:
+        text = insert_after(
+            text,
+            r"^\s*super\.onTrimMemory\(level\)\s*$",
+            "if (XrayProcess.isXray(this)) return",
+            "super.onTrimMemory(level)",
+        )
+    return text
+
+
+def hook_logcat(text):
+    # Xray logs from its own process: read the whole app (logd only serves the app's own UID)
+    if "--pid=" not in text:
+        return text
+    new = re.sub(r'^[ \t]*append\(" --pid=\$pid"\)\n', "", text, flags=re.M)
+    if new == text:
+        raise HookError("logcat --pid filter not found")
+    return new
 
 
 def hook_network(text):
@@ -124,6 +165,7 @@ HOOKS = {
     f"{APP}/WireGuardAutoTunnel.kt": hook_application,
     f"{APP}/di/NetworkModule.kt": hook_network,
     f"{APP}/ui/screens/settings/SettingsScreen.kt": hook_settings_screen,
+    "logcatter/src/main/java/com/zaneschepke/logcatter/LogcatStreamReader.kt": hook_logcat,
 }
 
 

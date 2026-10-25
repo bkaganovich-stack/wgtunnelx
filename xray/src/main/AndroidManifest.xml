@@ -5,14 +5,23 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application>
-        <!-- Routing VPN (Xray). Not exported; bound by the system through BIND_VPN_SERVICE. -->
+        <!--
+            Routing VPN (Xray). Not exported; bound by the system through BIND_VPN_SERVICE.
+            Runs in its own process: Xray-core and AmneziaWG each bring a Go runtime, and two Go
+            runtimes in one process break each other's signal handling.
+        -->
         <service
             android:name="com.wgtunnelx.xray.engine.XrayVpnService"
             android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE">
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:process=":xray">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name="com.wgtunnelx.xray.engine.XrayAlwaysOnReceiver"
+            android:exported="false" />
     </application>
 </manifest>

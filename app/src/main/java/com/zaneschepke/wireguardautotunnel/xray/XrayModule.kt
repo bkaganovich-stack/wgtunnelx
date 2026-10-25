@@ -1,6 +1,7 @@
 package com.zaneschepke.wireguardautotunnel.xray
 
 import com.wgtunnelx.xray.XrayRouting
+import com.zaneschepke.wireguardautotunnel.core.orchestration.TunnelCoordinator
 import com.zaneschepke.wireguardautotunnel.core.tunnel.TunnelBackendProvider
 import com.zaneschepke.wireguardautotunnel.core.tunnel.TunnelProvider
 import com.zaneschepke.wireguardautotunnel.di.Dispatcher
@@ -34,4 +35,16 @@ val xrayModule = module {
     }
 
     viewModelOf(::RoutingViewModel)
+
+    single(createdAtStart = true) {
+        AutoTunnelWatchdog(
+                stateHolder = get(),
+                settings = get(),
+                coordinator = get(),
+                networkEngine = { get() },
+                tunnelCoordinator = { get<TunnelCoordinator>() },
+                scope = get(named(Scope.APPLICATION)),
+            )
+            .also { it.start() }
+    }
 }

@@ -8,6 +8,7 @@ import com.wgtunnel.backend.BackendLog
 import com.wgtunnel.backend.LogLevel
 import com.wgtunnel.backend.service.AlwaysOnCallback
 import com.wgtunnel.backend.service.RuntimeManager
+import com.wgtunnelx.xray.XrayProcess
 import com.zaneschepke.logcatter.LogReader
 import com.zaneschepke.wireguardautotunnel.core.event.TunnelEventDispatcher
 import com.zaneschepke.wireguardautotunnel.core.orchestration.AppBoostrapCoordinator
@@ -80,6 +81,7 @@ class WireGuardAutoTunnel : Application(), KoinComponent {
     @OptIn(KoinViewModelScopeApi::class)
     override fun onCreate() {
         super.onCreate()
+        if (XrayProcess.isolate(this)) return
         BackendLog.setMinLevel(if (BuildConfig.DEBUG) LogLevel.Debug else LogLevel.Info)
         startKoin {
             androidContext(this@WireGuardAutoTunnel)
@@ -132,6 +134,7 @@ class WireGuardAutoTunnel : Application(), KoinComponent {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        if (XrayProcess.isXray(this)) return
         // numeric compare also covers the deprecated levels above background on older apis
         if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             applicationScope.launch { get<LogReader>().clearBufferedLogs() }
