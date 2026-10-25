@@ -8,6 +8,8 @@ WG Tunnel X
 Форк [WG Tunnel](https://github.com/wgtunnel/android) с раздельной маршрутизацией трафика по доменам, как в Xray, v2rayNG и v2RayTun.<br/>
 *A fork of WG Tunnel with Xray-style domain-based split routing (geosite / geoip).*
 
+**Русский** · [English](README.en.md)
+
 </div>
 
 ## Что это
