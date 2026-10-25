@@ -1,5 +1,6 @@
 package com.zaneschepke.wireguardautotunnel.xray
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -10,6 +11,7 @@ import com.zaneschepke.networkmonitor.StableNetworkEngine
 import com.zaneschepke.networkmonitor.VpnState
 import com.zaneschepke.wireguardautotunnel.core.orchestration.AutoTunnelCoordinator
 import com.zaneschepke.wireguardautotunnel.core.orchestration.TunnelCoordinator
+import com.zaneschepke.wireguardautotunnel.core.worker.ServiceWorker
 import com.zaneschepke.wireguardautotunnel.domain.events.TunnelActionEvent
 import com.zaneschepke.wireguardautotunnel.domain.repository.AutoTunnelSettingsRepository
 import com.zaneschepke.wireguardautotunnel.service.autotunnel.AutoTunnelStateHolder
@@ -23,12 +25,15 @@ import timber.log.Timber
 /**
  * WG Tunnel X: keeps auto-tunnel alive and visible in release logs.
  * - Auto-tunnel is a foreground service. If the process is stopped (force stop, some OEM task
- *   killers, a crash), Android does not bring it back, while the setting still says "on". When the
- *   app comes to the foreground in that state, the service is started again.
+ *   killers, repeated crashes), Android does not bring it back, while the setting still says "on".
+ *   When the app comes to the foreground in that state, the service is started again, and the
+ *   upstream [ServiceWorker] (never scheduled upstream) checks the same every 15 minutes. A force
+ *   stop also cancels that work; it is scheduled again on the next app start.
  * - Release builds drop debug logs, so the auto-tunnel decisions left no trace. The service state,
  *   the network it sees and every tunnel start/stop with its source are logged at INFO.
  */
 class AutoTunnelWatchdog(
+    private val context: Context,
     private val stateHolder: AutoTunnelStateHolder,
     private val settings: AutoTunnelSettingsRepository,
     private val coordinator: AutoTunnelCoordinator,
@@ -38,9 +43,11 @@ class AutoTunnelWatchdog(
 ) : DefaultLifecycleObserver {
 
     fun start() {
+        runCatching { ServiceWorker.start(context) }
+            .onFailure { Timber.tag(TAG).e(it, "Cannot schedule the auto-tunnel check") }
         scope.launch {
             stateHolder.active.collect { active ->
-                Timber.i("Auto-tunnel service %s", if (active) "running" else "not running")
+                Timber.tag(TAG).i("Auto-tunnel service %s", if (active) "running" else "not running")
             }
         }
         scope.launch {
@@ -51,13 +58,13 @@ class AutoTunnelWatchdog(
                     .stableState
                     .map { it?.state?.describe() }
                     .distinctUntilChanged()
-                    .collect { Timber.i("Auto-tunnel network: %s", it ?: "unknown") }
+                    .collect { Timber.tag(TAG).i("Auto-tunnel network: %s", it ?: "unknown") }
             }
         }
         scope.launch {
             tunnelCoordinator().actions.collect { event ->
                 val action = if (event is TunnelActionEvent.Started) "started" else "stopped"
-                Timber.i("Tunnel %d %s by %s", event.tunnelId, action, event.source)
+                Timber.tag(TAG).i("Tunnel %d %s by %s", event.tunnelId, action, event.source)
             }
         }
         Handler(Looper.getMainLooper()).post {
@@ -72,9 +79,13 @@ class AutoTunnelWatchdog(
     private suspend fun resumeIfStopped() {
         if (stateHolder.active.value) return
         if (!settings.getAutoTunnelSettings().isAutoTunnelEnabled) return
-        Timber.w("Auto-tunnel is enabled but its service was not running, starting it")
+        Timber.tag(TAG).w("Auto-tunnel is enabled but its service was not running, starting it")
         runCatching { coordinator.start() }
-            .onFailure { Timber.e(it, "Cannot start the auto-tunnel service") }
+            .onFailure { Timber.tag(TAG).e(it, "Cannot start the auto-tunnel service") }
+    }
+
+    private companion object {
+        const val TAG = "WgxAutoTunnel"
     }
 
     private fun ConnectivityState.describe(): String {

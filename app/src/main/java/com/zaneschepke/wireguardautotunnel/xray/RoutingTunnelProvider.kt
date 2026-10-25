@@ -53,7 +53,7 @@ class RoutingTunnelProvider(
         routing.engine.alwaysOnHandler = { RuntimeManager.alwaysOnCallback?.alwaysOnTriggered() }
         routing.engine.revokeHandler = { id ->
             scope.launch {
-                Timber.w("Routing ended on its own (revoke or crash), stopping tunnel %s", id)
+                Timber.tag(TAG).w("Routing ended on its own (revoke or crash), stopping tunnel %s", id)
                 if (id != null) stopTunnel(id) else stopActiveTunnels()
             }
         }
@@ -66,7 +66,7 @@ class RoutingTunnelProvider(
                     if (routed !in status.activeTunnels.keys && routing.engine.isActive) {
                         mutex.withLock {
                             if (routedTunnelId == routed) {
-                                Timber.i("Tunnel %d went down, stopping routing", routed)
+                                Timber.tag(TAG).i("Tunnel %d went down, stopping routing", routed)
                                 routing.engine.stop()
                                 routedTunnelId = null
                             }
@@ -84,7 +84,7 @@ class RoutingTunnelProvider(
     ): Result<Unit> = mutex.withLock {
         val settings = routing.store.current
         val routed = mode is BackendMode.Vpn && settings.appliesTo(tunnel.id)
-        Timber.i("Starting tunnel %d (%s), routing=%s", tunnel.id, mode::class.simpleName, routed)
+        Timber.tag(TAG).i("Starting tunnel %d (%s), routing=%s", tunnel.id, mode::class.simpleName, routed)
         if (mode !is BackendMode.Vpn || !routed) {
             stopRoutingLocked()
             return@withLock delegate.startTunnel(tunnel, mode, tunnelDnsConfig, outerConfig)
@@ -151,19 +151,19 @@ class RoutingTunnelProvider(
             .start(request)
             .onSuccess { routedTunnelId = tunnel.id }
             .onFailure {
-                Timber.e(it, "Routing failed to start, stopping tunnel %d", tunnel.id)
+                Timber.tag(TAG).e(it, "Routing failed to start, stopping tunnel %d", tunnel.id)
                 delegate.stopTunnel(tunnel.id)
             }
     }
 
     override suspend fun stopTunnel(tunnelId: Int): Result<Unit> = mutex.withLock {
-        Timber.i("Stopping tunnel %d", tunnelId)
+        Timber.tag(TAG).i("Stopping tunnel %d", tunnelId)
         if (routedTunnelId == tunnelId) stopRoutingLocked()
         delegate.stopTunnel(tunnelId)
     }
 
     override suspend fun stopActiveTunnels(): Result<Unit> = mutex.withLock {
-        Timber.i("Stopping all tunnels")
+        Timber.tag(TAG).i("Stopping all tunnels")
         stopRoutingLocked()
         delegate.stopActiveTunnels()
     }
@@ -220,7 +220,7 @@ class RoutingTunnelProvider(
                 try {
                     pkg to pm.getApplicationInfo(pkg, 0).uid
                 } catch (e: PackageManager.NameNotFoundException) {
-                    Timber.w("Routing rule app not installed: %s", pkg)
+                    Timber.tag(TAG).w("Routing rule app not installed: %s", pkg)
                     null
                 }
             }
@@ -255,6 +255,9 @@ class RoutingTunnelProvider(
         }
     }
 }
+
+// fixed tag: R8 renames the class, and the log must stay searchable
+private const val TAG = "WgxRouting"
 
 /** Raised before anything is started when the rules cannot work with the installed geo files. */
 class RoutingConfigException(val problems: List<RuleProblem>) :

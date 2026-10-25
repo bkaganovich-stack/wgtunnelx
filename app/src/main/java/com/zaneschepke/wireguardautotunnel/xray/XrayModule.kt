@@ -38,6 +38,7 @@ val xrayModule = module {
 
     single(createdAtStart = true) {
         AutoTunnelWatchdog(
+                context = androidContext(),
                 stateHolder = get(),
                 settings = get(),
                 coordinator = get(),
