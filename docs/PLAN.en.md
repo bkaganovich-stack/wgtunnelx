@@ -2,7 +2,7 @@
 
 [Русский](PLAN.md) · **English**
 
-This document covers what the fork does and why, how it's built, where its weak spots are and what comes next. State as of October 2026; based on WG Tunnel 5.8.2 and Xray-core 26.10.21.
+This document covers what the fork does and why, how it's built, where its weak spots are and what comes next. State as of October 25, 2026 (release 5.8.2-x.2); based on WG Tunnel 5.8.2 and Xray-core 26.10.21.
 
 ## 1. Goal and scope
 
@@ -108,7 +108,16 @@ What was done and verified while building the fork:
 - preset categories were checked against the list of codes in the runetfreedom geosite/geoip files;
 - the `assembleStandaloneDebug` build and the signed `assembleStandaloneRelease` build with R8: gomobile classes are kept, the manifest contains the fork's service and Activity, applicationId is `com.wgtunnelx.android`, the authority is `wgtunnelx.provider` (no clash with the original), and there are no geo files in the APK.
 
-**Not done yet:** a run on a real device. A manual pass is needed before the first public release (section 6, stage 1).
+**On-device testing.** Version `5.8.2-x.1` was used day to day on a Pixel 11 Pro XL (Android 17), and that's where the Go runtime clash showed up (section 2.2). Before `5.8.2-x.2` shipped, its test build went through a manual pass over adb on the same phone:
+
+- the app and Xray run in two separate processes;
+- if the `:xray` process crashes, the VPN closes in about 0.1 s and the tunnel stops;
+- if the app process crashes, `:xray` closes the VPN on its own in about 6 s;
+- a normal stop takes about 50 ms;
+- after a force stop, the auto-tunnel service starts again as soon as the app is opened;
+- no Go runtime errors (`fatal error`) in the log.
+
+So far only one device has been tested. Runs on other Android versions are still planned (section 6, stage 1).
 
 ## 5. Known limitations
 
@@ -121,10 +130,16 @@ What was done and verified while building the fork:
 
 ## 6. Roadmap
 
-**Stage 1 — first release (1–2 weeks).**
-- Create the repository and secrets, and the first release `5.8.2-x.1` via `x-release`.
-- Manual testing on 3–4 devices (Android 8, 10, 13, 15/16): start/stop, Wi-Fi ↔ mobile switching, always-on VPN, auto-tunnel, an AmneziaWG config, geo database updates, an IPv6 network, per-app rules.
-- Measure battery and memory use with the runetfreedom database.
+**Stage 1 — first release.**
+
+Done:
+- the repository, secrets and automatic releases are set up;
+- `5.8.2-x.1` came out on October 23, 2026, and `5.8.2-x.2` on October 25 (Xray in a separate process, auto-tunnel watchdog, log entries with fixed tags);
+- a manual pass on a Pixel 11 Pro XL with Android 17 (section 4).
+
+Still to do:
+- manual testing on 2–3 more devices (Android 8, 10, 13, 15/16): start/stop, Wi-Fi ↔ mobile switching, always-on VPN, auto-tunnel, an AmneziaWG config, geo database updates, an IPv6 network, per-app rules;
+- measure battery and memory use with the runetfreedom database.
 
 **Stage 2 — usability (2–4 weeks).**
 - "Xray routing" status on the tunnel card and in the notification instead of "proxy".
