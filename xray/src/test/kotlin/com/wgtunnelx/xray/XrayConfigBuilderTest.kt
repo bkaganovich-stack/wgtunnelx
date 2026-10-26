@@ -12,6 +12,7 @@ import com.wgtunnelx.xray.model.RouteTarget
 import com.wgtunnelx.xray.model.RoutingPresets
 import com.wgtunnelx.xray.model.RoutingRule
 import com.wgtunnelx.xray.model.RoutingSettings
+import com.wgtunnelx.xray.model.TelegramApps
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.serialization.json.Json
@@ -72,7 +73,7 @@ class XrayConfigBuilderTest {
     }
 
     @Test
-    fun `rule order is dns hijack, dns servers, tunnel networks, lan, user rules, catch all`() {
+    fun `rule order is dns hijack, dns servers, tunnel networks, lan, ipv6, user rules, catch all`() {
         val rules = build(RoutingSettings(rules = RoutingPresets.RUSSIA_DIRECT.rules)).rules()
         assertEquals("dns-out", rules[0].outbound())
         assertEquals("proxy", rules[1].outbound()) // dns-remote
@@ -83,14 +84,92 @@ class XrayConfigBuilderTest {
         )
         assertEquals("proxy", rules[3].outbound())
         assertEquals("direct", rules[4].outbound()) // LAN
+        assertEquals("block", rules[5].outbound()) // IPv6, the tunnel has none
         assertEquals(
             "geosite:category-ru",
-            rules[5]["domain"]!!.jsonArray.first().jsonPrimitive.content,
+            rules[6]["domain"]!!.jsonArray.first().jsonPrimitive.content,
         )
-        assertEquals("direct", rules[5].outbound())
+        assertEquals("direct", rules[6].outbound())
         val last = rules.last()
         assertEquals("tcp,udp", last["network"]!!.jsonPrimitive.content)
         assertEquals("proxy", last.outbound())
+    }
+
+    @Test
+    fun `ipv6 is refused before user rules only when the tunnel cannot carry it`() {
+        val settings = RoutingSettings(rules = RoutingPresets.RUSSIA_DIRECT.rules)
+        fun ipv6Rule(rules: List<JsonObject>) =
+            rules.indexOfFirst { r ->
+                r["ip"]?.jsonArray?.any { it.jsonPrimitive.content == "::/0" } == true
+            }
+
+        val rules = build(settings).rules()
+        val refused = ipv6Rule(rules)
+        assertTrue(refused >= 0)
+        assertEquals("block", rules[refused].outbound())
+        // after the DNS hijack (the TUN's IPv6 resolver must keep working) and the LAN bypass
+        assertTrue(refused > rules.indexOfFirst { it["port"]?.jsonPrimitive?.content == "53" })
+        assertTrue(refused < rules.indexOfFirst { it.containsKey("ruleTag") })
+
+        val withIpv6 =
+            Json.parseToJsonElement(
+                    XrayConfigBuilder.build(settings, params.copy(tunnelHasIpv6 = true))
+                )
+                .jsonObject
+                .rules()
+        assertEquals(-1, ipv6Rule(withIpv6))
+    }
+
+    @Test
+    fun `russian presets send the telegram apps through the tunnel ahead of direct ip rules`() {
+        listOf(RoutingPresets.RUSSIA_DIRECT, RoutingPresets.RUSSIA_BLOCKED_ONLY).forEach { preset ->
+            val ids = preset.rules.map { it.id }
+            val telegram = ids.indexOf(TelegramApps.RULE.id)
+            assertTrue("$preset", telegram >= 0)
+            assertEquals(RouteTarget.TUNNEL, preset.rules[telegram].target)
+            // domain rules for Russian sites stay first, so Telegram's in-app browser keeps them
+            // direct; address rules come after, so no Telegram address is decided by them
+            val firstIpRule = preset.rules.indexOfFirst { it.ips.isNotEmpty() }
+            assertTrue("$preset", telegram < firstIpRule)
+        }
+        val tg =
+            build(RoutingSettings(rules = RoutingPresets.RUSSIA_DIRECT.rules)).rules().single {
+                it["ruleTag"]?.jsonPrimitive?.content == TelegramApps.RULE.name
+            }
+        assertEquals("proxy", tg.outbound())
+        assertEquals(listOf("10123"), tg["process"]!!.jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `version 1 settings from a russian preset get the telegram rule in preset order`() {
+        listOf(RoutingPresets.RUSSIA_DIRECT, RoutingPresets.RUSSIA_BLOCKED_ONLY).forEach { preset ->
+            val old =
+                RoutingSettings(
+                    version = 1,
+                    rules = preset.rules.filter { it.id != TelegramApps.RULE.id },
+                )
+            val migrated = old.migrated()
+            assertEquals(RoutingSettings.CURRENT_VERSION, migrated.version)
+            assertEquals("$preset", preset.rules.map { it.id }, migrated.rules.map { it.id })
+            assertEquals(migrated, migrated.migrated())
+        }
+    }
+
+    @Test
+    fun `migration leaves hand written and telegram aware rules alone`() {
+        val custom = listOf(RoutingRule(id = "mine", domains = listOf("example.com")))
+        assertEquals(custom, RoutingSettings(version = 1, rules = custom).migrated().rules)
+
+        val ownTelegram =
+            RoutingPresets.RUSSIA_DIRECT.rules.filter { it.id != TelegramApps.RULE.id } +
+                RoutingRule(
+                    id = "my-tg",
+                    target = RouteTarget.DIRECT,
+                    packages = listOf("org.telegram.messenger"),
+                )
+        val migrated = RoutingSettings(version = 1, rules = ownTelegram).migrated()
+        assertEquals(ownTelegram, migrated.rules)
+        assertEquals(RoutingSettings.CURRENT_VERSION, migrated.version)
     }
 
     @Test

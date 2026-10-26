@@ -42,6 +42,7 @@ object XrayConfigBuilder {
 
     private val FAKE_IPV4_POOL = "198.18.0.0/15"
     private val FAKE_IPV6_POOL = "fc00::/18"
+    const val ANY_IPV6 = "::/0"
 
     /** Private, link-local and multicast ranges. Literal CIDRs so no geoip.dat is needed. */
     val LAN_CIDRS =
@@ -293,6 +294,13 @@ object XrayConfigBuilder {
         }
         if (settings.bypassLan) {
             add(rule(TAG_DIRECT) { put("ip", JsonArray(LAN_CIDRS.map(::JsonPrimitive))) })
+        }
+        if (!params.tunnelHasIpv6) {
+            // The TUN takes IPv6 so it cannot leak, but this tunnel cannot carry it. Accepting the
+            // connection and failing it upstream seconds later keeps apps retrying (Telegram dials
+            // its IPv6 data centres); refusing it at once makes them fall back to IPv4. DNS already
+            // answers without AAAA records, so direct IPv6 is not lost in practice.
+            add(rule(TAG_BLOCK) { put("ip", JsonArray(listOf(JsonPrimitive(ANY_IPV6)))) })
         }
 
         rules.forEach { r -> toXrayRule(r, params)?.let { add(it) } }

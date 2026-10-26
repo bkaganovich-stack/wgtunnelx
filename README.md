@@ -32,6 +32,8 @@ Everything else — AmneziaWG, auto-tunneling, Lockdown, proxy mode, tunnel reco
 3. Pick a template or add your own rules. There are two ready-made presets for Russia:
    - *Russian sites direct, everything else through the tunnel*;
    - *only blocked sites and popular foreign services through the tunnel* (`geosite:ru-blocked` and `geoip:ru-blocked` from the runetfreedom databases).
+
+   Both send the Telegram apps through the tunnel as a whole: Telegram connects to its servers by IP address, so lists of sites and addresses can't be relied on to catch it.
 4. The geo databases are downloaded the first time you turn routing on and refreshed once a week. The default source is [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat); you can switch to Loyalsoldier, v2fly or your own URLs.
 5. Start the tunnel as usual, in **VPN** mode.
 

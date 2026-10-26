@@ -38,9 +38,17 @@ class RoutingSettingsStore(context: Context) {
 
     private fun load(): RoutingSettings {
         if (!file.isFile) return RoutingSettings()
-        return runCatching { JSON.decodeFromString(RoutingSettings.serializer(), file.readText()) }
-            .onFailure { Timber.e(it, "Corrupt routing settings, using defaults") }
-            .getOrDefault(RoutingSettings())
+        val stored =
+            runCatching { JSON.decodeFromString(RoutingSettings.serializer(), file.readText()) }
+                .onFailure { Timber.e(it, "Corrupt routing settings, using defaults") }
+                .getOrNull() ?: return RoutingSettings()
+        val migrated = stored.migrated()
+        if (migrated != stored) {
+            Timber.i("Routing settings migrated from version %d", stored.version)
+            runCatching { write(migrated) }
+                .onFailure { Timber.e(it, "Cannot save migrated routing settings") }
+        }
+        return migrated
     }
 
     private fun write(settings: RoutingSettings) {

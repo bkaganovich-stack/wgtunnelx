@@ -2,6 +2,7 @@ package com.zaneschepke.wireguardautotunnel.xray
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import com.wgtunnel.backend.Tunnel
 import com.wgtunnel.backend.model.BackendMode
 import com.wgtunnel.backend.model.ProxyConfig
@@ -201,6 +202,7 @@ class RoutingTunnelProvider(
             (allowed.filter(::isPrivateNetwork) + addresses.orEmpty() + dns.map { hostRoute(it) })
                 .distinct()
         val hasIpv6 = iface.hasIpv6Address && allowed.any { it.contains(':') }
+        if (!hasIpv6) Timber.tag(TAG).i("Tunnel has no IPv6, IPv6 connections are refused")
         val packages = settings.rules.filter { it.enabled }.flatMap { it.packages }.toSet()
         return SessionParams(
             socksPort = port,
@@ -214,17 +216,28 @@ class RoutingTunnelProvider(
     }
 
     private fun resolveUids(packages: Set<String>): Map<String, Int> {
+        if (packages.isEmpty()) return emptyMap()
+        // the owner of a connection can only be looked up from Android 10 on; without a UID the
+        // rule is dropped instead of being checked, and failing, for every connection
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Timber.tag(TAG).w("App rules need Android 10 or newer, skipping them")
+            return emptyMap()
+        }
         val pm = context.packageManager
-        return packages
-            .mapNotNull { pkg ->
-                try {
-                    pkg to pm.getApplicationInfo(pkg, 0).uid
-                } catch (e: PackageManager.NameNotFoundException) {
-                    Timber.tag(TAG).w("Routing rule app not installed: %s", pkg)
-                    null
+        val missing = mutableListOf<String>()
+        val uids =
+            packages
+                .mapNotNull { pkg ->
+                    try {
+                        pkg to pm.getApplicationInfo(pkg, 0).uid
+                    } catch (e: PackageManager.NameNotFoundException) {
+                        missing += pkg
+                        null
+                    }
                 }
-            }
-            .toMap()
+                .toMap()
+        Timber.tag(TAG).i("App rules: %s; not installed: %s", uids, missing)
+        return uids
     }
 
     private fun isIpLiteral(value: String): Boolean =

@@ -1,6 +1,30 @@
 package com.wgtunnelx.xray.model
 
 /**
+ * Telegram connects to its data centres by IP address (IPv4 and IPv6), so domain lists never see
+ * it and IP lists lag behind its addresses. Whatever is missed goes direct, where Telegram is
+ * blocked, and the app hangs on "Connecting". Matching the apps themselves sends all of their
+ * traffic through the tunnel, the way a SOCKS proxy set in Telegram would.
+ */
+object TelegramApps {
+    val PACKAGES =
+        listOf(
+            "org.telegram.messenger", // Google Play
+            "org.telegram.messenger.web", // APK from telegram.org
+            "org.telegram.messenger.beta",
+            "org.thunderdog.challegram", // Telegram X
+        )
+
+    val RULE =
+        RoutingRule(
+            id = "preset-telegram-apps",
+            name = "Telegram apps",
+            target = RouteTarget.TUNNEL,
+            packages = PACKAGES,
+        )
+}
+
+/**
  * Ready-made rule sets. Category names were checked against the runetfreedom, Loyalsoldier and
  * v2fly geo databases; categories marked RU-only exist only in the runetfreedom files.
  */
@@ -22,6 +46,7 @@ enum class RoutingPresets(val defaultTarget: RouteTarget, val rules: List<Routin
                             "domain:xn--p1ai",
                         ),
                 ),
+                TelegramApps.RULE,
                 RoutingRule(
                     id = "preset-ru-direct-ip",
                     name = "Russian IPs direct",
@@ -43,6 +68,7 @@ enum class RoutingPresets(val defaultTarget: RouteTarget, val rules: List<Routin
                     // RU-only category
                     domains = listOf("geosite:ru-available-only-inside"),
                 ),
+                TelegramApps.RULE,
                 RoutingRule(
                     id = "preset-ru-blocked",
                     name = "Blocked in Russia",

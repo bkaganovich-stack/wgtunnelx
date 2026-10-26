@@ -127,6 +127,8 @@ So far only one device has been tested. Runs on other Android versions are still
 4. Per-app rules need Android 10+ (`ConnectivityManager.getConnectionOwnerUid`).
 5. APK size: the Xray core adds about 33 MB of native code per architecture.
 6. The routing screen is a separate Activity, so the app's PIN lock doesn't cover it (the rules contain no secrets).
+7. If the tunnel has no IPv6, every IPv6 connection outside the local network is refused at once, so apps fall back to IPv4 right away. The VPN interface still takes IPv6 so it can't leak, and DNS answers without AAAA records anyway. Before 5.8.2-x.3 such connections were accepted and failed seconds later, and Telegram kept retrying its IPv6 servers.
+8. The Russian presets send the Telegram apps (`org.telegram.messenger`, `.web`, `.beta`, Telegram X) through the tunnel by app: Telegram dials its servers by address, IPv4 and IPv6, so domain and IP lists miss part of it, and whatever goes direct is blocked. Settings saved from these presets by an older version get the rule once, when the app updates.
 
 ## 6. Roadmap
 

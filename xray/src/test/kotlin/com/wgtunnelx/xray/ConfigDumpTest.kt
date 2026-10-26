@@ -28,11 +28,19 @@ class ConfigDumpTest {
                 tunnelHasIpv6 = true,
                 packageUids = mapOf("org.example" to 10100),
             )
+        // an IPv4-only tunnel (IPv6 refused) with Telegram installed (its app rule kept)
+        val ipv4Only =
+            params.copy(
+                tunnelHasIpv6 = false,
+                packageUids = params.packageUids + ("org.telegram.messenger" to 10200),
+            )
         RoutingPresets.entries.forEach { preset ->
             val settings =
                 RoutingSettings(defaultTarget = preset.defaultTarget, rules = preset.rules)
             File(dir, "preset-${preset.name}.json")
                 .writeText(XrayConfigBuilder.build(settings, params))
+            File(dir, "preset-${preset.name}-ipv4-only.json")
+                .writeText(XrayConfigBuilder.build(settings, ipv4Only))
         }
         val everything =
             RoutingSettings(

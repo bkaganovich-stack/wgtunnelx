@@ -160,7 +160,35 @@ data class RoutingSettings(
     fun appliesTo(tunnelId: Int): Boolean =
         enabled && (tunnelIds.isEmpty() || tunnelId in tunnelIds)
 
+    /** Brings settings saved by an older version up to [CURRENT_VERSION]. */
+    fun migrated(): RoutingSettings {
+        var s = this
+        if (s.version < 2) s = s.withTelegramRule().copy(version = 2)
+        return s
+    }
+
+    /**
+     * Version 2 added [TelegramApps.RULE] to the Russian presets. Rules that started from one of
+     * them get it at the same place; rules that already route a Telegram app, or were written by
+     * hand, are left alone.
+     */
+    private fun withTelegramRule(): RoutingSettings {
+        val hasTelegram =
+            rules.any { r ->
+                r.id == TelegramApps.RULE.id || r.packages.any { it in TelegramApps.PACKAGES }
+            }
+        if (hasTelegram) return this
+        val anchor = rules.indexOfFirst { it.id in TELEGRAM_ANCHORS }
+        if (anchor < 0) return this
+        return copy(
+            rules = rules.toMutableList().apply { add(anchor, TelegramApps.RULE) }
+        )
+    }
+
     companion object {
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
+
+        /** Preset rules the Telegram rule goes in front of (RUSSIA_DIRECT, RUSSIA_BLOCKED_ONLY). */
+        private val TELEGRAM_ANCHORS = setOf("preset-ru-direct-ip", "preset-ru-blocked")
     }
 }
