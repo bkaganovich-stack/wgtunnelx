@@ -86,7 +86,7 @@ The hooks are idempotent. If a merge hits a conflict in one of these files, the 
 **Conflict policy** (`scripts/resolve-upstream-conflicts.sh`):
 
 - upstream `.github/**` is deleted (upstream workflows aren't needed in the fork and must not run; new upstream workflows are removed too);
-- `README.md` keeps the fork's version (`.gitattributes`, `ours` driver);
+- `README.md` and `SECURITY.md` keep the fork's version (`.gitattributes`, `ours` driver);
 - files with hooks take the upstream version, and the hooks are applied again;
 - anything else: the merge is rolled back and an issue is opened with the list of files and the commands for a manual merge.
 

@@ -2,3 +2,4 @@
 # sides changed them, keep the fork version (needs `git config merge.ours.driver true`, set by
 # scripts/upstream-sync.sh).
 README.md merge=ours
+SECURITY.md merge=ours

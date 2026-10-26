@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resolves the merge conflicts the fork policy can decide on its own:
 #  - .github/**    upstream automation is not used by the fork -> take the deletion
-#  - README.md     the fork README wins
+#  - README.md, SECURITY.md   the fork version wins
 #  - hook files    take upstream, then re-apply the fork hooks (scripts/apply-hooks.py)
 # Anything else is a real conflict between upstream code and fork changes and is reported.
 set -euo pipefail
@@ -26,7 +26,7 @@ while IFS= read -r path; do
     .github/*)
       git rm -q -f -- "$path" 2>/dev/null || true
       echo "resolved (drop upstream automation): $path" ;;
-    README.md)
+    README.md|SECURITY.md)
       git checkout --ours -- "$path" && git add -- "$path"
       echo "resolved (keep fork): $path" ;;
     *)
