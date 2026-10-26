@@ -5,70 +5,69 @@ WG Tunnel X
 
 <div align="center">
 
-Форк [WG Tunnel](https://github.com/wgtunnel/android) с раздельной маршрутизацией трафика по доменам, как в Xray, v2rayNG и v2RayTun.<br/>
-*A fork of WG Tunnel with Xray-style domain-based split routing (geosite / geoip).*
+A fork of [WG Tunnel](https://github.com/wgtunnel/android) that splits traffic by domain, the way Xray, v2rayNG and v2RayTun do.
 
-**Русский** · [English](README.en.md)
+**English** · [Русский](README.ru.md)
 
 </div>
 
-## Что это
+## What it is
 
-WG Tunnel — клиент WireGuard и AmneziaWG для Android. Раздельное туннелирование в нём (как и в любом WireGuard-клиенте) делается через `AllowedIPs` и таблицу маршрутов Android, то есть только по IP-адресам и приложениям. Сайты за CDN, меняющиеся адреса и списки вида «всё заблокированное» так описать почти невозможно.
+WG Tunnel is a WireGuard and AmneziaWG client for Android. Like any WireGuard client, it does split tunneling through `AllowedIPs` and the Android routing table, so you can only pick IP addresses and apps. Sites behind a CDN, addresses that keep changing and lists like "everything that's blocked" are close to impossible to describe that way.
 
-WG Tunnel X добавляет к нему движок [Xray-core](https://github.com/XTLS/Xray-core). Решение «туннель / напрямую / блокировать» принимается для каждого соединения:
+WG Tunnel X adds the [Xray-core](https://github.com/XTLS/Xray-core) engine on top. Each connection gets its own decision: tunnel, direct or block. Rules can match:
 
-- по домену — он берётся из TLS SNI, HTTP Host и QUIC (sniffing), поэтому правила работают даже для соединений, открытых по IP;
-- по категориям баз `geosite:` и `geoip:` (`geosite:youtube`, `geosite:category-ru`, `geosite:ru-blocked`, `geoip:ru`, …);
-- по IP/CIDR, порту, сети (TCP/UDP), протоколу (`http`, `tls`, `quic`, `bittorrent`) и приложению.
+- the domain, taken from TLS SNI, the HTTP Host header and QUIC (sniffing), so they work even for connections opened by IP;
+- `geosite:` and `geoip:` database categories (`geosite:youtube`, `geosite:category-ru`, `geosite:ru-blocked`, `geoip:ru`, …);
+- IP/CIDR, port, network (TCP/UDP), protocol (`http`, `tls`, `quic`, `bittorrent`) and app.
 
-Синтаксис правил совпадает с Xray: `domain:`, `full:`, `keyword:`, `regexp:`, `geosite:`, `geoip:`, `ext:`. Правила импортируются из v2rayNG (custom routing) и из конфигов Xray, экспорт тоже есть.
+The rule syntax is the same as in Xray: `domain:`, `full:`, `keyword:`, `regexp:`, `geosite:`, `geoip:`, `ext:`. You can import rules from v2rayNG (custom routing) and from Xray configs, and export them too.
 
-Всё остальное — AmneziaWG, автотуннелирование, Lockdown, прокси-режим, восстановление туннеля, плитки и интеграции — остаётся таким же, как в WG Tunnel. Пока маршрутизация выключена, туннели запускаются ровно так же, как в оригинале.
+Everything else — AmneziaWG, auto-tunneling, Lockdown, proxy mode, tunnel recovery, tiles and integrations — works the same as in WG Tunnel. While routing is off, tunnels start exactly as they do in the original app.
 
-## Как пользоваться
+## How to use it
 
-1. Установите APK из [Releases](../../releases) (`…-arm64.apk` подходит для большинства телефонов). WG Tunnel X ставится рядом с WG Tunnel и обновляется из этого репозитория.
-2. **Настройки → Маршрутизация по доменам (Xray)** → включите переключатель.
-3. Выберите шаблон или добавьте свои правила. Для России есть два готовых варианта:
-   - *российские сайты напрямую, остальное через туннель*;
-   - *через туннель только заблокированное и популярные зарубежные сервисы* (`geosite:ru-blocked`, `geoip:ru-blocked` из баз runetfreedom).
-4. Гео-базы скачиваются при первом включении (источник по умолчанию — [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat), можно выбрать Loyalsoldier, v2fly или свои ссылки) и обновляются раз в неделю.
-5. Запустите туннель как обычно, в режиме **VPN**.
+1. Install the APK from [Releases](../../releases) (`…-arm64.apk` fits most phones). WG Tunnel X installs alongside WG Tunnel and updates from this repository.
+2. Go to **Settings → Domain routing (Xray)** and turn the switch on.
+3. Pick a template or add your own rules. There are two ready-made presets for Russia:
+   - *Russian sites direct, everything else through the tunnel*;
+   - *only blocked sites and popular foreign services through the tunnel* (`geosite:ru-blocked` and `geoip:ru-blocked` from the runetfreedom databases).
+4. The geo databases are downloaded the first time you turn routing on and refreshed once a week. The default source is [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat); you can switch to Loyalsoldier, v2fly or your own URLs.
+5. Start the tunnel as usual, in **VPN** mode.
 
-Перед запуском приложение сверяет правила с загруженными базами: если категории `geosite:что-то` в файле нет, вы увидите понятную ошибку вместо падения ядра.
+Before starting, the app checks your rules against the downloaded databases. If a `geosite:something` category isn't in the file, you get a clear error message instead of a core crash.
 
-## Как это устроено
+## How it works
 
 ```
-Приложения ─► TUN (VpnService WG Tunnel X) ─► Xray-core: sniffing + правила
-                                                 ├─ proxy  ─► SOCKS5 127.0.0.1 ─► AmneziaWG (userspace) ─► сервер WG
-                                                 ├─ direct ─► обычная сеть (приложение исключено из своего VPN)
-                                                 ├─ block
-                                                 └─ dns-out ─► DNS Xray (домены «туннеля» резолвятся через туннель)
+Apps ─► TUN (WG Tunnel X VpnService) ─► Xray-core: sniffing + rules
+                                          ├─ proxy  ─► SOCKS5 127.0.0.1 ─► AmneziaWG (userspace) ─► WG server
+                                          ├─ direct ─► regular network (the app is excluded from its own VPN)
+                                          ├─ block
+                                          └─ dns-out ─► Xray DNS (tunneled domains are resolved through the tunnel)
 ```
 
-Туннель запускается штатным бэкендом WG Tunnel в userspace-режиме (тот же, что у «Локального прокси»), поэтому AmneziaWG-обфускация, восстановление и статистика работают без изменений. Xray-core работает в отдельном процессе: и AmneziaWG, и Xray написаны на Go, а два рантайма Go в одном процессе мешают друг другу. Подробности, ограничения и план — в [docs/PLAN.md](docs/PLAN.md).
+The tunnel is brought up by the stock WG Tunnel backend in userspace mode (the same one "Local proxy" uses), so AmneziaWG obfuscation, recovery and statistics keep working unchanged. Xray-core runs in a separate process: AmneziaWG and Xray are both written in Go, and two Go runtimes in one process get in each other's way. Details, limitations and the roadmap are in [docs/PLAN.en.md](docs/PLAN.en.md).
 
-## Обновления
+## Updates
 
-Новая версия WG Tunnel X собирается и публикуется автоматически вскоре после выхода стабильного релиза WG Tunnel: GitHub Actions проверяет апстрим каждые 15 минут, вливает релиз, прогоняет тесты, проверяет конфиги настоящим Xray-core и выпускает подписанные APK. Версия выглядит как `5.8.3-x.1`: номер WG Tunnel плюс ревизия форка. Как настроить это в своём репозитории — [docs/RELEASING.md](docs/RELEASING.md).
+A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.8.3-x.1`: the WG Tunnel version plus the fork revision. To set this up in your own repository, see [docs/RELEASING.en.md](docs/RELEASING.en.md).
 
-## Сборка
+## Building
 
-Нужны JDK 21 и Android SDK, как для WG Tunnel.
+You need JDK 21 and the Android SDK, same as for WG Tunnel.
 
 ```sh
 ./gradlew :app:assembleStandaloneDebug
 ./gradlew :xray:testDebugUnitTest
 ```
 
-`libv2ray.aar` ([2dust/AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite)) скачивается при первой сборке по версии из `xray/libxray.version`. Можно положить свою сборку в `xray/libs/libv2ray.aar`.
+`libv2ray.aar` ([2dust/AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite)) is downloaded on the first build, using the version in `xray/libxray.version`. You can also drop your own build into `xray/libs/libv2ray.aar`.
 
-## Лицензии и благодарности
+## Licenses and credits
 
-- WG Tunnel — © Zane Schepke и участники, MIT. Код форка — тоже MIT.
-- Xray-core — MPL-2.0, AndroidLibXrayLite — LGPL-3.0 (подключается отдельной библиотекой `libgojni.so`, исходники по ссылкам выше).
-- Гео-базы — проекты runetfreedom, Loyalsoldier и v2fly, загружаются с их серверов.
+- WG Tunnel — © Zane Schepke and contributors, MIT. The fork's code is MIT as well.
+- Xray-core — MPL-2.0; AndroidLibXrayLite — LGPL-3.0 (shipped as the separate `libgojni.so` library, sources at the links above).
+- Geo databases — runetfreedom, Loyalsoldier and v2fly projects, downloaded from their servers.
 
-Подробнее — в [NOTICE.md](NOTICE.md). WG Tunnel X — неофициальный проект, авторы WG Tunnel к нему отношения не имеют; ошибки форка, пожалуйста, присылайте сюда, а не в апстрим.
+See [NOTICE.md](NOTICE.md) for more. WG Tunnel X is an unofficial project and has no affiliation with the WG Tunnel authors. Please report bugs in the fork here, not upstream.
