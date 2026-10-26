@@ -1,5 +1,7 @@
 # Third-party components of WG Tunnel X
 
+**English** · [Русский](NOTICE.ru.md)
+
 | Component | License | Source |
 | --- | --- | --- |
 | WG Tunnel (base application) | MIT | https://github.com/wgtunnel/android |
