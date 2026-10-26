@@ -43,6 +43,7 @@ object XrayConfigBuilder {
     private val FAKE_IPV4_POOL = "198.18.0.0/15"
     private val FAKE_IPV6_POOL = "fc00::/18"
     const val ANY_IPV6 = "::/0"
+    const val QUIC_PORT = 443
 
     /** Private, link-local and multicast ranges. Literal CIDRs so no geoip.dat is needed. */
     val LAN_CIDRS =
@@ -303,11 +304,56 @@ object XrayConfigBuilder {
             add(rule(TAG_BLOCK) { put("ip", JsonArray(listOf(JsonPrimitive(ANY_IPV6)))) })
         }
 
-        rules.forEach { r -> toXrayRule(r, params)?.let { add(it) } }
+        rules.forEach { r ->
+            if (settings.blockQuicInTunnel && r.target == RouteTarget.TUNNEL) {
+                quicBlockFor(r)?.let { toXrayRule(it, params) }?.let { add(it) }
+            }
+            toXrayRule(r, params)?.let { add(it) }
+        }
+        if (settings.blockQuicInTunnel && settings.defaultTarget == RouteTarget.TUNNEL) {
+            add(
+                rule(TAG_BLOCK) {
+                    put("network", "udp")
+                    put("port", QUIC_PORT.toString())
+                }
+            )
+        }
 
         // explicit catch-all
         add(rule(settings.defaultTarget.tag) { put("network", "tcp,udp") })
     }
+
+    /**
+     * The QUIC (UDP 443) part of a rule that sends traffic into the tunnel, refused instead.
+     *
+     * UDP reaches the tunnel through the SOCKS5 UDP relay of WG Tunnel's proxy mode, whose
+     * go-socks5 v0.1.0 crashes the app when a relayed flow fails (handleAssociate dereferences a
+     * nil address, fixed upstream in v0.1.1). QUIC is most of that UDP and falls back to TCP at
+     * once when refused. Returns null when the rule can never match QUIC.
+     */
+    internal fun quicBlockFor(rule: RoutingRule): RoutingRule? {
+        val networks =
+            rule.network.split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+        if (networks.isNotEmpty() && "udp" !in networks) return null
+        if (rule.ports.isNotBlank() && !portListHas(rule.ports, QUIC_PORT)) return null
+        if (rule.protocols.isNotEmpty() && "quic" !in rule.protocols.map { it.trim() }) return null
+        return rule.copy(
+            name = if (rule.name.isBlank()) "" else "${rule.name} (QUIC)",
+            target = RouteTarget.BLOCK,
+            network = "udp",
+            ports = QUIC_PORT.toString(),
+        )
+    }
+
+    private fun portListHas(ports: String, port: Int): Boolean =
+        ports.split(',').map { it.trim() }.any { item ->
+            val range = item.split('-').map { it.trim().toIntOrNull() }
+            when (range.size) {
+                1 -> range[0] == port
+                2 -> range[0] != null && range[1] != null && port in range[0]!!..range[1]!!
+                else -> false
+            }
+        }
 
     internal fun toXrayRule(rule: RoutingRule, params: SessionParams): JsonObject? {
         val uids =

@@ -121,6 +121,52 @@ class XrayConfigBuilderTest {
     }
 
     @Test
+    fun `quic that would enter the tunnel is refused, direct quic is left alone`() {
+        val settings =
+            RoutingSettings(
+                rules =
+                    listOf(
+                        RoutingRule(
+                            name = "ru",
+                            target = RouteTarget.DIRECT,
+                            domains = listOf("domain:ru"),
+                        ),
+                        RoutingRule(name = "yt", domains = listOf("geosite:youtube")),
+                        RoutingRule(name = "tcp only", network = "tcp", domains = listOf("a.com")),
+                        RoutingRule(
+                            name = "other ports",
+                            ports = "80,8000-9000",
+                            domains = listOf("b.com"),
+                        ),
+                        RoutingRule(name = "range", ports = "400-500", domains = listOf("c.com")),
+                    )
+            )
+        val rules = build(settings).rules()
+        val tags = rules.mapNotNull { it["ruleTag"]?.jsonPrimitive?.content }
+        assertEquals(
+            listOf("ru", "yt (QUIC)", "yt", "tcp only", "other ports", "range (QUIC)", "range"),
+            tags,
+        )
+        val quic = rules.single { it["ruleTag"]?.jsonPrimitive?.content == "yt (QUIC)" }
+        assertEquals("block", quic.outbound())
+        assertEquals("udp", quic["network"]!!.jsonPrimitive.content)
+        assertEquals("443", quic["port"]!!.jsonPrimitive.content)
+        assertEquals("geosite:youtube", quic["domain"]!!.jsonArray.single().jsonPrimitive.content)
+        // the tunnel catch-all gets its own refusal right in front of it
+        val beforeLast = rules[rules.size - 2]
+        assertEquals("block", beforeLast.outbound())
+        assertEquals("443", beforeLast["port"]!!.jsonPrimitive.content)
+
+        val off = build(settings.copy(blockQuicInTunnel = false)).rules()
+        assertTrue(
+            off.none { it.outbound() == "block" && it["port"]?.jsonPrimitive?.content == "443" }
+        )
+        val direct = build(settings.copy(defaultTarget = RouteTarget.DIRECT)).rules()
+        assertEquals("direct", direct.last().outbound())
+        assertEquals("range", direct[direct.size - 2]["ruleTag"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun `russian presets send the telegram apps through the tunnel ahead of direct ip rules`() {
         listOf(RoutingPresets.RUSSIA_DIRECT, RoutingPresets.RUSSIA_BLOCKED_ONLY).forEach { preset ->
             val ids = preset.rules.map { it.id }
@@ -183,6 +229,7 @@ class XrayConfigBuilderTest {
         val settings =
             RoutingSettings(
                 bypassLan = false,
+                blockQuicInTunnel = false,
                 rules =
                     listOf(
                         RoutingRule(name = "off", enabled = false, domains = listOf("a.com")),
@@ -198,6 +245,7 @@ class XrayConfigBuilderTest {
     fun `app rules become uid process matchers and missing apps drop the rule`() {
         val settings =
             RoutingSettings(
+                blockQuicInTunnel = false,
                 rules =
                     listOf(
                         RoutingRule(name = "tg", packages = listOf("org.telegram.messenger")),

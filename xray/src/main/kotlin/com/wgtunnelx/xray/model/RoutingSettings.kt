@@ -145,6 +145,11 @@ data class RoutingSettings(
     val sniffing: Boolean = true,
     /** Route private and link-local networks directly. */
     val bypassLan: Boolean = true,
+    /**
+     * Refuse QUIC (UDP 443) that would go through the tunnel, so it falls back to TCP. Keeps UDP
+     * off the tunnel proxy's UDP relay, which can crash the app (see XrayConfigBuilder).
+     */
+    val blockQuicInTunnel: Boolean = true,
     val dns: DnsOptions = DnsOptions(),
     val geo: GeoOptions = GeoOptions(),
     /** Xray log level: debug, info, warning, error, none. */

@@ -185,6 +185,8 @@ class RoutingViewModel(
 
     fun setBypassLan(value: Boolean) = edit { it.copy(bypassLan = value) }
 
+    fun setBlockQuicInTunnel(value: Boolean) = edit { it.copy(blockQuicInTunnel = value) }
+
     fun setDomainStrategy(value: DomainStrategy) = edit { it.copy(domainStrategy = value) }
 
     fun setLogLevel(value: String) = edit { it.copy(logLevel = value) }

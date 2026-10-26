@@ -95,6 +95,8 @@
     <string name="x_sniffing_desc">Определять домен из TLS SNI, HTTP Host и QUIC. Нужен для правил по доменам.</string>
     <string name="x_bypass_lan">Локальная сеть напрямую</string>
     <string name="x_bypass_lan_desc">Частные и link-local сети идут напрямую, кроме сетей самого туннеля.</string>
+    <string name="x_block_quic">Без QUIC в туннеле</string>
+    <string name="x_block_quic_desc">Отклонять UDP 443, который пошёл бы через туннель, чтобы браузеры и приложения использовали TCP. Передача UDP — самое нестабильное место туннеля.</string>
     <string name="x_domain_strategy">Стратегия доменов</string>
     <string name="x_log_level">Уровень логов Xray</string>
     <string name="x_custom_config">Свой конфиг Xray</string>

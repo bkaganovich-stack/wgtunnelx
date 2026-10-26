@@ -44,9 +44,9 @@ class RoutingSettingsStore(context: Context) {
                 .getOrNull() ?: return RoutingSettings()
         val migrated = stored.migrated()
         if (migrated != stored) {
-            Timber.i("Routing settings migrated from version %d", stored.version)
+            Timber.tag(TAG).i("Routing settings migrated from version %d", stored.version)
             runCatching { write(migrated) }
-                .onFailure { Timber.e(it, "Cannot save migrated routing settings") }
+                .onFailure { Timber.tag(TAG).e(it, "Cannot save migrated routing settings") }
         }
         return migrated
     }
@@ -61,6 +61,9 @@ class RoutingSettingsStore(context: Context) {
     }
 
     companion object {
+        /** Fixed log tag: R8 renames the class, so a class-derived tag is unreadable in release. */
+        private const val TAG = "WgxRouting"
+
         val JSON = Json {
             ignoreUnknownKeys = true
             encodeDefaults = true

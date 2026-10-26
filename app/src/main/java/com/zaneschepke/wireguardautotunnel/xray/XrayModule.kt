@@ -48,4 +48,14 @@ val xrayModule = module {
             )
             .also { it.start() }
     }
+
+    single(createdAtStart = true) {
+        RoutedTunnelHealer(
+                context = androidContext(),
+                backend = { get() },
+                engine = get<XrayRouting>().engine,
+                scope = get(named(Scope.APPLICATION)),
+            )
+            .also { it.start() }
+    }
 }

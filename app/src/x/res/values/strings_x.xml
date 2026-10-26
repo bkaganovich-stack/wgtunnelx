@@ -96,6 +96,8 @@
     <string name="x_sniffing_desc">Read the domain from TLS SNI, HTTP Host and QUIC. Required for domain rules.</string>
     <string name="x_bypass_lan">Bypass LAN</string>
     <string name="x_bypass_lan_desc">Private and link-local networks go direct, except networks that belong to the tunnel.</string>
+    <string name="x_block_quic">No QUIC through the tunnel</string>
+    <string name="x_block_quic_desc">Refuse UDP 443 that would go through the tunnel, so browsers and apps use TCP. The tunnel\'s UDP relay is the least stable part of the tunnel.</string>
     <string name="x_domain_strategy">Domain strategy</string>
     <string name="x_log_level">Xray log level</string>
     <string name="x_custom_config">Custom Xray config</string>

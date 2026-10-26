@@ -559,6 +559,12 @@ private fun AdvancedSection(
         checked = s.bypassLan,
         onCheckedChange = viewModel::setBypassLan,
     )
+    SwitchRow(
+        title = stringResource(R.string.x_block_quic),
+        description = stringResource(R.string.x_block_quic_desc),
+        checked = s.blockQuicInTunnel,
+        onCheckedChange = viewModel::setBlockQuicInTunnel,
+    )
     DropdownRow(
         title = stringResource(R.string.x_domain_strategy),
         selected = s.domainStrategy,
