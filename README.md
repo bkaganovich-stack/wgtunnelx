@@ -47,11 +47,11 @@ Apps ─► TUN (WG Tunnel X VpnService) ─► Xray-core: sniffing + rules
                                           └─ dns-out ─► Xray DNS (tunneled domains are resolved through the tunnel)
 ```
 
-The tunnel is brought up by the stock WG Tunnel backend in userspace mode (the same one "Local proxy" uses), so AmneziaWG obfuscation, recovery and statistics keep working unchanged. Xray-core runs in a separate process: AmneziaWG and Xray are both written in Go, and two Go runtimes in one process get in each other's way. Details, limitations and the roadmap are in [docs/PLAN.en.md](docs/PLAN.en.md).
+The tunnel is brought up by the stock WG Tunnel backend in userspace mode (the same one "Local proxy" uses), so AmneziaWG obfuscation, recovery and statistics keep working unchanged. Xray-core runs in a separate process: AmneziaWG and Xray are both written in Go, and two Go runtimes in one process get in each other's way. Details, limitations and the roadmap are in [docs/PLAN.md](docs/PLAN.md).
 
 ## Updates
 
-A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.8.3-x.1`: the WG Tunnel version plus the fork revision. To set this up in your own repository, see [docs/RELEASING.en.md](docs/RELEASING.en.md).
+A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.8.3-x.1`: the WG Tunnel version plus the fork revision. To set this up in your own repository, see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Building
 

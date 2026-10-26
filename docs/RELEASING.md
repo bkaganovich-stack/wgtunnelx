@@ -1,27 +1,27 @@
-# Релизы WG Tunnel X: настройка и обслуживание
+# WG Tunnel X releases: setup and maintenance
 
-**Русский** · [English](RELEASING.en.md)
+**English** · [Русский](RELEASING.ru.md)
 
-## Разовая настройка (≈15 минут)
+## One-time setup (≈15 minutes)
 
-### 1. Репозиторий
+### 1. Repository
 
-Создайте **обычный** публичный репозиторий `wgtunnelx` (кнопка *New repository*, без README и лицензии). Кнопкой *Fork* пользоваться не стоит: в форках публичных репозиториев расписания GitHub Actions по умолчанию выключены ([документация](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)), а вся автоматика держится на расписании.
+Create a **regular** public repository named `wgtunnelx` (the *New repository* button, no README or license). Don't use the *Fork* button: scheduled GitHub Actions workflows are disabled by default in forks of public repositories ([docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)), and all of the automation runs on a schedule.
 
 ```sh
 git remote add origin https://github.com/<owner>/wgtunnelx.git
 git push -u origin main
 ```
 
-Если владелец не `bkaganovich-stack`, поменяйте `updateRepository` в `wgtunnelx.properties` — по нему приложение ищет обновления.
+If the owner isn't `bkaganovich-stack`, change `updateRepository` in `wgtunnelx.properties`: that's where the app looks for updates.
 
-### 2. Права Actions
+### 2. Actions permissions
 
-*Settings → Actions → General → Workflow permissions* → **Read and write permissions**. Без этого workflow не сможет пушить слияния, теги и создавать релизы.
+*Settings → Actions → General → Workflow permissions* → **Read and write permissions**. Without this, the workflows can't push merges and tags or create releases.
 
-### 3. Ключ подписи
+### 3. Signing key
 
-Все релизы должны подписываться одним ключом, иначе Android не установит обновление поверх. Храните копию ключа и паролей вне GitHub.
+Every release has to be signed with the same key, otherwise Android won't install an update over the existing app. Keep a copy of the key and its passwords outside GitHub.
 
 ```sh
 keytool -genkeypair -v -keystore wgtunnelx.jks -alias wgtunnelx \
@@ -31,82 +31,82 @@ base64 -w0 wgtunnelx.jks > wgtunnelx.jks.b64     # macOS: base64 -i wgtunnelx.jk
 
 *Settings → Secrets and variables → Actions → New repository secret*:
 
-| Секрет | Значение |
+| Secret | Value |
 | --- | --- |
-| `KEYSTORE` | содержимое `wgtunnelx.jks.b64` |
-| `SIGNING_STORE_PASSWORD` | пароль хранилища |
+| `KEYSTORE` | contents of `wgtunnelx.jks.b64` |
+| `SIGNING_STORE_PASSWORD` | keystore password |
 | `SIGNING_KEY_ALIAS` | `wgtunnelx` |
-| `SIGNING_KEY_PASSWORD` | пароль ключа |
+| `SIGNING_KEY_PASSWORD` | key password |
 
-keytool по умолчанию создаёт хранилище PKCS12: у него пароль ключа совпадает с паролем хранилища, даже если при создании вводился другой. Сборка проверяет секреты до компиляции (`scripts/verify-keystore.sh`) и пишет, какой из них не подходит.
+By default keytool creates a PKCS12 keystore, where the key password is the same as the keystore password, even if you typed a different one when creating it. The build checks the secrets before compiling (`scripts/verify-keystore.sh`) and tells you which one is wrong.
 
-### 4. Токен для слияний `SYNC_TOKEN` (рекомендуется)
+### 4. `SYNC_TOKEN` for merges (recommended)
 
-**Зачем.** Workflow `x-upstream-release` пушит в `main` коммиты апстрима. Если хотя бы один из них меняет файлы в `.github/workflows` (апстрим правит свои воркфлоу регулярно), GitHub отклонит пуш со встроенным `GITHUB_TOKEN`: для таких коммитов нужно право `workflows`, а выдать его `GITHUB_TOKEN` нельзя. В итоге релиз упадёт на шаге *Push main*, и workflow создаст issue. `SYNC_TOKEN` закрывает эту ситуацию. Пока его нет, workflow пользуется `GITHUB_TOKEN`, и всё работает до первого такого релиза апстрима.
+**Why.** The `x-upstream-release` workflow pushes upstream commits to `main`. If even one of them touches files in `.github/workflows` (upstream edits its workflows regularly), GitHub rejects the push made with the built-in `GITHUB_TOKEN`: such commits need the `workflows` permission, and `GITHUB_TOKEN` can't be given it. The release then fails at the *Push main* step and the workflow opens an issue. `SYNC_TOKEN` covers this case. Until it's set, the workflow uses `GITHUB_TOKEN`, and everything works up to the first upstream release of that kind.
 
-**Создание токена.**
+**Creating the token.**
 
-1. Откройте <https://github.com/settings/personal-access-tokens/new> (*аватар → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*).
-2. **Token name:** `wgtunnelx-sync`. **Description:** например, «слияния апстрима WG Tunnel».
-3. **Resource owner:** ваш аккаунт (`bkaganovich-stack`).
-4. **Expiration:** максимальный доступный срок. Запишите дату окончания в календарь: после неё слияния снова начнут зависеть от `GITHUB_TOKEN` (см. «Продление» ниже).
-5. **Repository access:** *Only select repositories* → `wgtunnelx`. Доступ к другим репозиториям токену не нужен.
+1. Open <https://github.com/settings/personal-access-tokens/new> (*avatar → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*).
+2. **Token name:** `wgtunnelx-sync`. **Description:** for example, "WG Tunnel upstream merges".
+3. **Resource owner:** your account (`bkaganovich-stack`).
+4. **Expiration:** the longest period available. Put the expiry date in your calendar: after it, merges go back to depending on `GITHUB_TOKEN` (see "Renewal" below).
+5. **Repository access:** *Only select repositories* → `wgtunnelx`. The token doesn't need access to any other repository.
 6. **Permissions → Repository permissions:**
    - **Contents:** *Read and write*;
    - **Workflows:** *Read and write*;
-   - **Metadata:** *Read-only* (GitHub включает его сам).
+   - **Metadata:** *Read-only* (GitHub turns it on by itself).
 
-   Остальные права оставьте *No access*.
-7. Нажмите **Generate token** и сразу скопируйте значение (`github_pat_…`): GitHub показывает его один раз.
+   Leave everything else at *No access*.
+7. Click **Generate token** and copy the value (`github_pat_…`) right away: GitHub shows it only once.
 
-**Секрет.** В репозитории `wgtunnelx`: *Settings → Secrets and variables → Actions → Repository secrets → New repository secret*. **Name:** `SYNC_TOKEN`, **Secret:** скопированный токен. Если секрет уже есть, нажмите на карандаш рядом с ним и вставьте новое значение.
+**The secret.** In the `wgtunnelx` repository: *Settings → Secrets and variables → Actions → Repository secrets → New repository secret*. **Name:** `SYNC_TOKEN`, **Secret:** the token you copied. If the secret already exists, click the pencil next to it and paste the new value.
 
-**Как проверить.** Отдельной проверки нет: токен используется только при слиянии апстрима. Признак, что всё в порядке, — шаг *Push main* в `x-upstream-release` проходит и для релизов, в которых апстрим менял свои воркфлоу.
+**How to check it.** There's no separate check: the token is only used when merging upstream. The sign that it works is that the *Push main* step in `x-upstream-release` passes even for releases where upstream changed its workflows.
 
-**Продление.** Когда срок подходит к концу, GitHub присылает письмо. Откройте токен в *Fine-grained tokens* → **Regenerate token**, затем обновите секрет `SYNC_TOKEN` новым значением. Если срок уже истёк, `x-upstream-release` упадёт на первом же шаге (*checkout*) при выходе нового релиза апстрима, и GitHub пришлёт письмо о неудачном запуске. Issue в этом случае не создаётся, потому что до слияния дело не доходит. После обновления секрета запустите `x-upstream-release` вручную (*Actions → x-upstream-release → Run workflow*).
+**Renewal.** GitHub emails you when the token is about to expire. Open it under *Fine-grained tokens* → **Regenerate token**, then update the `SYNC_TOKEN` secret with the new value. If the token has already expired, `x-upstream-release` fails at its very first step (*checkout*) once a new upstream release comes out, and GitHub emails you about the failed run. No issue is opened in that case, because the workflow never gets as far as the merge. After updating the secret, run `x-upstream-release` by hand (*Actions → x-upstream-release → Run workflow*).
 
-**Безопасность.** Токен действует только на `wgtunnelx` и только с двумя правами. При утечке отзовите его (*Fine-grained tokens → токен → Delete*) и создайте новый.
+**Security.** The token works only on `wgtunnelx` and has only two permissions. If it leaks, revoke it (*Fine-grained tokens → the token → Delete*) and create a new one.
 
-### 5. Первый релиз
+### 5. First release
 
-*Actions → x-release → Run workflow*, галочку *bump* снимите: получится `5.8.2-x.1`. Дальше всё идёт само.
+*Actions → x-release → Run workflow*, with the *bump* box unchecked: you get `5.8.2-x.1`. From then on everything runs by itself.
 
-## Как работает автоматика
+## How the automation works
 
-1. `x-upstream-release` каждые 15 минут спрашивает `GET /repos/wgtunnel/android/releases/latest`. Черновики и пре-релизы этот эндпоинт не возвращает; дополнительно проверяется, что тег имеет вид `X.Y.Z`.
-2. Если релиза форка для этой версии ещё нет, тег вливается в `main` (`scripts/upstream-sync.sh`):
-   - удалённые в форке воркфлоу апстрима остаются удалёнными, новые — вычищаются;
-   - в файлах с врезками форка берётся версия апстрима, врезки накладываются заново (`scripts/apply-hooks.py`);
-   - `xRevision` сбрасывается в 1.
-3. Тесты → проверка сгенерированных конфигов настоящим Xray-core с базами runetfreedom → подписанная сборка `standaloneRelease`.
-4. Только после успешной сборки: push в `main`, тег `X.Y.Z-x.1`, релиз с APK (`arm64`, `armv7`, universal), `SHA256SUMS`, отпечатком сертификата и заметками апстрима. Релиз помечается как *latest*, и установленные копии предлагают обновиться.
+1. Every 15 minutes `x-upstream-release` calls `GET /repos/wgtunnel/android/releases/latest`. This endpoint doesn't return drafts or pre-releases; on top of that, the workflow checks that the tag looks like `X.Y.Z`.
+2. If there's no fork release for that version yet, the tag is merged into `main` (`scripts/upstream-sync.sh`):
+   - upstream workflows deleted in the fork stay deleted, new ones are removed;
+   - in files that carry fork hooks, the upstream version is taken and the hooks are applied again (`scripts/apply-hooks.py`);
+   - `xRevision` is reset to 1.
+3. Tests → validation of the generated configs against a real Xray-core with the runetfreedom databases → signed `standaloneRelease` build.
+4. Only after a successful build: push to `main`, tag `X.Y.Z-x.1`, and a release with the APKs (`arm64`, `armv7`, universal), `SHA256SUMS`, the certificate fingerprint and the upstream release notes. The release is marked *latest*, and installed copies offer to update.
 
-Задержка от релиза апстрима — обычно 15–30 минут: GitHub может сдвигать запуски по расписанию под нагрузкой.
+The delay after an upstream release is usually 15–30 minutes: GitHub may push scheduled runs back when it's under load.
 
-## Если что-то пошло не так
+## When something goes wrong
 
-Workflow создаёт issue — его увидит владелец репозитория (уведомление на почту).
+The workflow opens an issue, and the repository owner sees it (with an email notification).
 
-**«Upstream X.Y.Z needs a manual merge».** Апстрим изменил код, пересекающийся с форком, вне известных врезок.
+**"Upstream X.Y.Z needs a manual merge".** Upstream changed code that overlaps with the fork outside the known hooks.
 
 ```sh
 git fetch https://github.com/wgtunnel/android.git tag X.Y.Z
-git merge X.Y.Z                 # разрешить конфликты
-python3 scripts/apply-hooks.py  # врезки на месте?
+git merge X.Y.Z                 # resolve the conflicts
+python3 scripts/apply-hooks.py  # are the hooks in place?
 ./gradlew :xray:testDebugUnitTest :app:assembleStandaloneDebug
 git push
 ```
 
-Затем *Actions → x-upstream-release → Run workflow* (поле тега можно оставить пустым).
+Then *Actions → x-upstream-release → Run workflow* (the tag field can stay empty).
 
-**«WG Tunnel X build for upstream X.Y.Z failed».** Слияние прошло, сборка или тесты — нет. Чаще всего апстрим поменял API, которым пользуется `RoutingTunnelProvider`. Исправьте код в `main`, запустите workflow вручную. Если упала проверка конфигов Xray, смотрите лог шага *Validate generated configs*.
+**"WG Tunnel X build for upstream X.Y.Z failed".** The merge went through, but the build or the tests didn't. Most often upstream changed an API that `RoutingTunnelProvider` relies on. Fix the code in `main` and run the workflow by hand. If the Xray config validation failed, look at the log of the *Validate generated configs* step.
 
-**Расписание перестало запускаться.** *Actions → x-upstream-release → Enable workflow*. Обычно до этого не доходит: workflow сам продлевает себе жизнь раз в сутки.
+**The schedule stopped running.** *Actions → x-upstream-release → Enable workflow*. It rarely comes to that: the workflow keeps itself alive once a day.
 
-## Обновление Xray-core
+## Updating Xray-core
 
-`x-update-xray` раз в неделю проверяет релизы [2dust/AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite). Новая версия коммитится в `main` (`xray/libxray.version` и `xray/libxray.sha256`) только если тесты и `xray run -test` прошли, и попадает в ближайший релиз. Выпустить её сразу — `x-release`.
+Once a week `x-update-xray` checks for [2dust/AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) releases. A new version is committed to `main` (`xray/libxray.version` and `xray/libxray.sha256`) only if the tests and `xray run -test` pass, and it ships with the next release. To release it right away, run `x-release`.
 
-## Релиз изменений форка
+## Releasing fork changes
 
-*Actions → x-release* с галочкой *bump*: `5.8.3-x.1` → `5.8.3-x.2`. Код версии растёт как `upstreamVersionCode × 100 + xRevision`, поэтому любые релизы форка обновляют друг друга корректно.
+*Actions → x-release* with the *bump* box checked: `5.8.3-x.1` → `5.8.3-x.2`. The version code grows as `upstreamVersionCode × 100 + xRevision`, so any fork release updates cleanly over any other.
