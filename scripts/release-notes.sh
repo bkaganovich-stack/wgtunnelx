@@ -3,7 +3,7 @@
 #   scripts/release-notes.sh <version> <notes-file>   edit a local notes file in place
 #   scripts/release-notes.sh <version>                update the published GitHub release
 # The section sits between marker comments, so running it again replaces it. Without a notes
-# file for the version, nothing changes. The second form needs GH_TOKEN and GITHUB_REPOSITORY.
+# file for the version, an earlier section is removed. The second form needs GH_TOKEN and GITHUB_REPOSITORY.
 set -euo pipefail
 VERSION=${1:?version, e.g. 5.8.3-x.2}
 SECTION="$(dirname "$0")/../docs/release-notes/$VERSION.md"
@@ -26,9 +26,13 @@ if [ $# -ge 2 ]; then
   insert "$2"
   exit 0
 fi
-[ -f "$SECTION" ] || { echo "No $SECTION, nothing to do"; exit 0; }
 notes=$(mktemp)
 gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$notes"
+cp "$notes" "$notes.orig"
 insert "$notes"
+if cmp -s "$notes" "$notes.orig"; then
+  echo "The description of $VERSION is already up to date"
+  exit 0
+fi
 gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
 echo "Updated the description of $VERSION"
