@@ -110,3 +110,5 @@ Once a week `x-update-xray` checks for [2dust/AndroidLibXrayLite](https://github
 ## Releasing fork changes
 
 *Actions → x-release* with the *bump* box checked: `5.8.3-x.1` → `5.8.3-x.2`. The version code grows as `upstreamVersionCode × 100 + xRevision`, so any fork release updates cleanly over any other.
+
+**What's new.** Before running `x-release`, commit `docs/release-notes/<version>.md` (for example `docs/release-notes/5.8.3-x.2.md`) with a short list of changes. The release description gets it right after its first line. To change the description of a release that is already out, edit the file in `main` and run *Actions → x-release-notes* with that version: the section is replaced, not added a second time.

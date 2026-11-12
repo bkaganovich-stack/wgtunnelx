@@ -1,0 +1,26 @@
+name: x-release-notes
+# Updates the description of a published release from docs/release-notes/<version>.md (on main).
+# Releases built after that file was committed get the section on their own (publish-release.sh).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag, e.g. 5.8.3-x.2
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Update release description
+        run: scripts/release-notes.sh "${{ inputs.version }}"

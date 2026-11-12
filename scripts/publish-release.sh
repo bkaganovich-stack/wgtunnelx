@@ -45,6 +45,8 @@ $upstream_notes
 </details>
 MD
 
+"$(dirname "$0")/release-notes.sh" "$VERSION" "$NOTES"
+
 # annotated tags need an identity even when no earlier step committed anything
 git config user.name >/dev/null || git config user.name "github-actions[bot]"
 git config user.email >/dev/null || git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
