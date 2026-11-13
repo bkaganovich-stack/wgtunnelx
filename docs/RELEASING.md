@@ -78,10 +78,11 @@ By default keytool creates a PKCS12 keystore, where the key password is the same
    - upstream workflows deleted in the fork stay deleted, new ones are removed;
    - in files that carry fork hooks, the upstream version is taken and the hooks are applied again (`scripts/apply-hooks.py`);
    - `xRevision` is reset to 1.
-3. Tests → validation of the generated configs against a real Xray-core with the runetfreedom databases → signed `standaloneRelease` build.
-4. Only after a successful build: push to `main`, tag `X.Y.Z-x.1`, and a release with the APKs (`arm64`, `armv7`, universal), `SHA256SUMS`, the certificate fingerprint and the upstream release notes. The release is marked *latest*, and installed copies offer to update.
+3. The release job waits for approval if the `release` environment has required reviewers (*Settings → Environments → release*): GitHub emails the reviewer, and the job starts after *Review deployments → Approve*. Upstream code is built with the signing key within reach, so look at the upstream release before approving. Without reviewers on the environment the job starts right away.
+4. Tests → validation of the generated configs against a real Xray-core with the runetfreedom databases → signed `standaloneRelease` build.
+5. Only after a successful build: push to `main`, tag `X.Y.Z-x.1`, and a release with the APKs (`arm64`, `armv7`, universal), `SHA256SUMS`, the certificate fingerprint and the upstream release notes. The release is marked *latest*, and installed copies offer to update.
 
-The delay after an upstream release is usually 15–30 minutes: GitHub may push scheduled runs back when it's under load.
+The delay between an upstream release and the approval request is usually 15–30 minutes: GitHub may push scheduled runs back when it's under load.
 
 ## When something goes wrong
 

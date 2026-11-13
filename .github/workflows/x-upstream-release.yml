@@ -78,11 +78,14 @@ jobs:
     needs: check
     if: needs.check.outputs.release == 'true'
     runs-on: ubuntu-latest
+    # Upstream code is merged and built here with the signing key and SYNC_TOKEN in reach.
+    # With required reviewers set on this environment the job waits for a manual approval.
+    environment: release
     env:
       TAG: ${{ needs.check.outputs.tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
