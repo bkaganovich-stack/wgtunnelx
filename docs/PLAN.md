@@ -124,7 +124,7 @@ So far only one device has been tested. Runs on other Android versions are still
 1. Routing works in **VPN** mode. In "Local proxy" and "Lockdown" modes the tunnel starts the way it does upstream.
 2. On the tunnel card and in the notification, a routed tunnel shows up as a proxy with the internal address `127.0.0.1:port`. Fixing this needs changes to the upstream UI, so it's postponed.
 3. The tunnel's `AllowedIPs` limit what can go through `proxy`. Routing needs `0.0.0.0/0, ::/0`; private networks from `AllowedIPs` are automatically pinned to the tunnel ahead of the "local network direct" rule.
-4. Per-app rules need Android 10+ (`ConnectivityManager.getConnectionOwnerUid`).
+4. Per-app rules need Android 10+ (`ConnectivityManager.getConnectionOwnerUid`). So does upstream strict split tunneling on a routed tunnel: since 5.9.1-x.2 the generated Xray config refuses TUN connections by UID (excluded apps, or apps outside the included list, plus owners that can't be identified), the way WG Tunnel's own TUN filter does. A custom Xray config is used as written, without it.
 5. APK size: the Xray core adds about 33 MB of native code per architecture.
 6. The routing screen is a separate Activity, so the app's PIN lock doesn't cover it (the rules contain no secrets).
 7. If the tunnel has no IPv6, every IPv6 connection outside the local network is refused at once, so apps fall back to IPv4 right away. The VPN interface still takes IPv6 so it can't leak, and DNS answers without AAAA records anyway. Before 5.8.2-x.3 such connections were accepted and failed seconds later, and Telegram kept retrying its IPv6 servers.

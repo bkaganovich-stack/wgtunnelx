@@ -49,7 +49,8 @@ class XrayVpnService : VpnService() {
             // Always-on VPN: let the app start its default tunnel the regular way
             Timber.tag(TAG).i("Started by the system (Always-on VPN)")
             sendBroadcast(
-                Intent(XrayAlwaysOnReceiver.ACTION).setClass(this, XrayAlwaysOnReceiver::class.java)
+                Intent(XrayAlwaysOnReceiver.ACTION)
+                    .setClass(this, XrayAlwaysOnReceiver::class.java),
             )
             // the tunnel start that follows decides which VPN service owns the interface
             handler.post { if (tunFd == null) stopSelf(startId) }
@@ -90,6 +91,12 @@ class XrayVpnService : VpnService() {
                 core
                     ?: XrayCore(start.assetDir, getSystemService(ConnectivityManager::class.java))
                         .also { core = it }
+            // the config refuses excluded apps by UID; without lookups it would let them through
+            if (start.strictSplit && !core.findsOwners) {
+                throw IllegalStateException(
+                    "Strict split tunneling needs app lookups (Android 10+)",
+                )
+            }
             core.start(start.configJson, fd.fd)
             report(EngineState.Running(start.tunnelId, System.currentTimeMillis(), core.version))
         } catch (e: Throwable) {
@@ -159,15 +166,14 @@ class XrayVpnService : VpnService() {
     private fun attachClient(messenger: Messenger) {
         if (client?.binder == messenger.binder) return
         detachClient()
-        val recipient =
-            IBinder.DeathRecipient {
-                handler.post {
-                    Timber.tag(TAG).w("App process died, stopping routing")
-                    client = null
-                    clientDeath = null
-                    stopRouting("app died")
-                }
+        val recipient = IBinder.DeathRecipient {
+            handler.post {
+                Timber.tag(TAG).w("App process died, stopping routing")
+                client = null
+                clientDeath = null
+                stopRouting("app died")
             }
+        }
         try {
             messenger.binder.linkToDeath(recipient, 0)
         } catch (e: RemoteException) {

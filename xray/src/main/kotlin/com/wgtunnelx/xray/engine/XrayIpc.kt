@@ -28,6 +28,7 @@ internal object XrayIpc {
     private const val INCLUDED = "included"
     private const val EXCLUDED = "excluded"
     private const val METERED = "metered"
+    private const val STRICT_SPLIT = "strictSplit"
     private const val CONFIGURE_INTENT = "configureIntent"
     private const val ASSET_DIR = "assetDir"
 
@@ -49,6 +50,7 @@ internal object XrayIpc {
         val includedApps: List<String>,
         val excludedApps: List<String>,
         val metered: Boolean,
+        val strictSplit: Boolean,
         val configureIntent: PendingIntent?,
         val assetDir: String,
     )
@@ -62,6 +64,7 @@ internal object XrayIpc {
             includedApps = includedApps,
             excludedApps = excludedApps,
             metered = metered,
+            strictSplit = strictSplit,
             configureIntent = configureIntent,
             assetDir = assetDir,
         )
@@ -75,6 +78,7 @@ internal object XrayIpc {
             putStringArrayList(INCLUDED, ArrayList(includedApps))
             putStringArrayList(EXCLUDED, ArrayList(excludedApps))
             putBoolean(METERED, metered)
+            putBoolean(STRICT_SPLIT, strictSplit)
             putParcelable(CONFIGURE_INTENT, configureIntent)
             putString(ASSET_DIR, assetDir)
         }
@@ -89,6 +93,7 @@ internal object XrayIpc {
             includedApps = getStringArrayList(INCLUDED).orEmpty(),
             excludedApps = getStringArrayList(EXCLUDED).orEmpty(),
             metered = getBoolean(METERED),
+            strictSplit = getBoolean(STRICT_SPLIT),
             configureIntent =
                 BundleCompat.getParcelable(this, CONFIGURE_INTENT, PendingIntent::class.java),
             assetDir = requireNotNull(getString(ASSET_DIR)) { "no asset dir" },

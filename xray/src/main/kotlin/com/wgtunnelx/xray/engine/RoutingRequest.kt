@@ -14,6 +14,11 @@ data class RoutingRequest(
     /** WireGuard `ExcludedApplications`. */
     val excludedApps: List<String> = emptyList(),
     val metered: Boolean = false,
+    /**
+     * Upstream strict split tunneling is on. [configJson] then refuses connections by app UID (see
+     * [com.wgtunnelx.xray.config.StrictSplit]), which only works when the core can look owners up.
+     */
+    val strictSplit: Boolean = false,
     val configureIntent: PendingIntent? = null,
 )
 
