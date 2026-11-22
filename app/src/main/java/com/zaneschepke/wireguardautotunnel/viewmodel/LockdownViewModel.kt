@@ -49,14 +49,23 @@ class LockdownViewModel(
             )
 
         lockdownSettingsRepository.upsert(updated)
-        withContext(Dispatchers.IO) { tunnelCoordinator.applyLockdownSettings(updated) }
+        val applied =
+            withContext(Dispatchers.IO) { tunnelCoordinator.applyLockdownSettings(updated) }
+        if (applied.isFailure) {
+            return@intent postSideEffect(
+                GlobalSideEffect.Snackbar(
+                    StringValue.StringResource(R.string.lockdown_apply_failed),
+                    ToastType.Error,
+                ),
+            )
+        }
 
         postSideEffect(GlobalSideEffect.PopBackStack)
         postSideEffect(
             GlobalSideEffect.Snackbar(
                 StringValue.StringResource(R.string.config_changes_saved),
                 ToastType.Success,
-            )
+            ),
         )
     }
 

@@ -4,11 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import com.dokar.sonner.ToastType
 import com.zaneschepke.logcatter.LogReader
-import com.zaneschepke.logcatter.model.LogMessage
 import com.zaneschepke.wireguardautotunnel.BuildConfig
 import com.zaneschepke.wireguardautotunnel.R
 import com.zaneschepke.wireguardautotunnel.domain.repository.GlobalEffectRepository
 import com.zaneschepke.wireguardautotunnel.domain.sideeffect.GlobalSideEffect
+import com.zaneschepke.wireguardautotunnel.ui.state.IdentifiedLogMessage
 import com.zaneschepke.wireguardautotunnel.ui.state.LoggerUiState
 import com.zaneschepke.wireguardautotunnel.util.Constants
 import com.zaneschepke.wireguardautotunnel.util.FileUtils
@@ -30,7 +30,8 @@ class LoggerViewModel(
 ) : OrbitContainerHost<LoggerUiState, LoggerUiState, Nothing>, ViewModel() {
 
     // accumulator shared between the producer and sampler coroutines of the batching pipeline
-    private val logBuffer = ArrayDeque<LogMessage>()
+    private val logBuffer = ArrayDeque<IdentifiedLogMessage>()
+    private var nextLogId = 0L
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     override val container =
@@ -43,7 +44,7 @@ class LoggerViewModel(
                     .onEach { logMessage ->
                         synchronized(logBuffer) {
                             if (logBuffer.size >= MAX_LOG_SIZE) logBuffer.removeFirst()
-                            logBuffer.addLast(logMessage)
+                            logBuffer.addLast(IdentifiedLogMessage(nextLogId++, logMessage))
                         }
                     }
                     .sample(BATCH_INTERVAL)
@@ -74,7 +75,7 @@ class LoggerViewModel(
                 mimeType = FileUtils.ZIP_FILE_MIME_TYPE,
                 successMessage = StringValue.StringResource(R.string.log_export_success),
                 prepareFile = { file -> logReader.zipLogFiles(file.absolutePath) },
-            )
+            ),
         )
     }
 
@@ -86,7 +87,7 @@ class LoggerViewModel(
             GlobalSideEffect.Snackbar(
                 StringValue.StringResource(R.string.stored_logs_deleted),
                 ToastType.Success,
-            )
+            ),
         )
     }
 

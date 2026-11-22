@@ -61,6 +61,7 @@ import com.zaneschepke.wireguardautotunnel.ui.common.button.SurfaceRow
 import com.zaneschepke.wireguardautotunnel.ui.common.button.SwitchWithDivider
 import com.zaneschepke.wireguardautotunnel.ui.common.scroll.appScrollbar
 import com.zaneschepke.wireguardautotunnel.ui.navigation.Route
+import com.zaneschepke.wireguardautotunnel.ui.screens.pin.LocalAppLocked
 import com.zaneschepke.wireguardautotunnel.ui.state.DisplayTunnelState
 import com.zaneschepke.wireguardautotunnel.ui.state.TunnelListRow
 import com.zaneschepke.wireguardautotunnel.ui.state.TunnelsUiState
@@ -90,8 +91,10 @@ fun TunnelList(
     val focusRequester = remember { FocusRequester() }
     var editableRows by remember { mutableStateOf(uiState.rows) }
 
-    LaunchedEffect(Unit) {
-        if (isTv) {
+    val locked = LocalAppLocked.current
+    // Waits for the PIN lock, which holds focus while it covers this screen
+    LaunchedEffect(locked) {
+        if (isTv && !locked) {
             focusRequester.requestFocus()
         }
     }
@@ -155,7 +158,7 @@ fun TunnelList(
                                 }
                                 viewModel.clearSelectedTunnels()
                             }
-                        }
+                        },
                 )
                 .overscroll(rememberOverscrollEffect())
                 .appScrollbar(
@@ -196,7 +199,7 @@ fun TunnelList(
                                             R.string.group_with_count,
                                             row.group.name,
                                             row.childCount,
-                                        )
+                                        ),
                                 )
                             }
                             is TunnelListRow.TunnelRow -> {
@@ -276,12 +279,12 @@ fun TunnelList(
                                 Modifier.draggableHandle(
                                     onDragStarted = {
                                         hapticFeedback.performHapticFeedback(
-                                            HapticFeedbackType.GestureThresholdActivate
+                                            HapticFeedbackType.GestureThresholdActivate,
                                         )
                                     },
                                     onDragStopped = {
                                         hapticFeedback.performHapticFeedback(
-                                            HapticFeedbackType.GestureEnd
+                                            HapticFeedbackType.GestureEnd,
                                         )
                                     },
                                     dragGestureDetector = DragGestureDetector.LongPress,
@@ -326,7 +329,7 @@ private fun ListRow(
                 modifier =
                     modifier.then(
                         if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                        else Modifier
+                        else Modifier,
                     ),
                 leading = {
                     Icon(
@@ -395,7 +398,7 @@ private fun ListRow(
                                 contentDescription =
                                     stringResource(
                                         if (row.visibleExpanded) R.string.collapse_group
-                                        else R.string.expand_group
+                                        else R.string.expand_group,
                                     ),
                             )
                         }
@@ -413,12 +416,7 @@ private fun ListRow(
                 }
             SurfaceRow(
                 modifier =
-                    modifier
-                        .then(if (row.grouped) Modifier.padding(start = 24.dp) else Modifier)
-                        .then(
-                            if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                            else Modifier
-                        ),
+                    modifier.then(if (row.grouped) Modifier.padding(start = 24.dp) else Modifier),
                 leading = {
                     Icon(
                         Icons.Rounded.Circle,
@@ -451,6 +449,7 @@ private fun ListRow(
                     else {
                         { viewModel.toggleSelectedTunnel(tunnel.id) }
                     },
+                trailingOutsideClickTarget = isTv,
                 trailing = { rowModifier ->
                     SwitchWithDivider(
                         checked = isRunning,
@@ -461,7 +460,11 @@ private fun ListRow(
                                 viewModel.stopTunnel(tunnel)
                             }
                         },
-                        modifier = rowModifier,
+                        modifier =
+                            rowModifier.then(
+                                if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                                else Modifier,
+                            ),
                     )
                 },
             )

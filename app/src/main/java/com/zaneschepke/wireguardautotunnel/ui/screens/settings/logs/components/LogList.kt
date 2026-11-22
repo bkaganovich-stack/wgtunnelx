@@ -9,12 +9,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zaneschepke.logcatter.model.LogMessage
 import com.zaneschepke.wireguardautotunnel.ui.common.scroll.appScrollbar
+import com.zaneschepke.wireguardautotunnel.ui.state.IdentifiedLogMessage
 
 @Composable
 fun LogList(
-    logs: List<LogMessage>,
+    logs: List<IdentifiedLogMessage>,
     lazyColumnListState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
@@ -29,6 +29,8 @@ fun LogList(
                 ),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        itemsIndexed(items = logs, key = { index, _ -> index }) { _, log -> LogItem(log = log) }
+        itemsIndexed(items = logs, key = { _, item -> item.id }) { _, item ->
+            LogItem(log = item.message)
+        }
     }
 }

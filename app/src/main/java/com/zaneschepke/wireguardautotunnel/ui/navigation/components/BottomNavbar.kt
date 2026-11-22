@@ -21,6 +21,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.zaneschepke.wireguardautotunnel.ui.LocalIsAndroidTV
 import com.zaneschepke.wireguardautotunnel.ui.common.animations.AnimatedFloatIcon
@@ -48,6 +51,7 @@ fun BottomNavbar(isAutoTunnelActive: Boolean, currentTab: Tab, onTabSelected: (T
                             CompositionLocalProvider(LocalRippleConfiguration provides theme) {
                                 IconButton(
                                     onClick = { onTabSelected(tab) },
+                                    modifier = Modifier.semantics { selected = isSelected },
                                     colors =
                                         IconButtonDefaults.iconButtonColors(
                                             containerColor = Color.Transparent,
@@ -67,6 +71,7 @@ fun BottomNavbar(isAutoTunnelActive: Boolean, currentTab: Tab, onTabSelected: (T
                                         activeIcon = tab.activeIcon,
                                         inactiveIcon = tab.inactiveIcon,
                                         isSelected = isSelected,
+                                        contentDescription = stringResource(tab.titleRes),
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
@@ -79,7 +84,7 @@ fun BottomNavbar(isAutoTunnelActive: Boolean, currentTab: Tab, onTabSelected: (T
                                     modifier = Modifier.offset(x = (-4).dp, y = (4).dp).size(6.dp),
                                     containerColor = SilverTree,
                                 )
-                            }
+                            },
                         ) {
                             button()
                         }

@@ -7,6 +7,7 @@ import com.wgtunnel.parser.Config
 import com.wgtunnel.parser.ConfigReconciler
 import com.zaneschepke.wireguardautotunnel.R
 import com.zaneschepke.wireguardautotunnel.core.event.TunnelErrorEvent
+import com.zaneschepke.wireguardautotunnel.core.tunnel.StrictSplitDefaults
 import com.zaneschepke.wireguardautotunnel.core.tunnel.TunnelProvider
 import com.zaneschepke.wireguardautotunnel.data.repository.RoomDnsSettingsRepository
 import com.zaneschepke.wireguardautotunnel.domain.enums.TunnelActionSource
@@ -30,6 +31,7 @@ import com.zaneschepke.wireguardautotunnel.service.ServiceManager
 import com.zaneschepke.wireguardautotunnel.util.StringValue
 import com.zaneschepke.wireguardautotunnel.util.extensions.toTunnelDnsConfigOrNull
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class TunnelCoordinator(
@@ -57,6 +60,7 @@ class TunnelCoordinator(
     proxyRepository: ProxySettingsRepository,
     lockdownModeRepository: LockdownSettingsRepository,
     private val appStateRepository: AppStateRepository,
+    private val strictSplitDefaults: StrictSplitDefaults,
     scope: CoroutineScope,
 ) {
 
@@ -144,7 +148,7 @@ class TunnelCoordinator(
                                     payload.monitoring,
                                     payload.general.tunnelScriptingEnabled,
                                     payload.general,
-                                )
+                                ),
                             )
                             .onFailure {
                                 Timber.e(
@@ -157,10 +161,10 @@ class TunnelCoordinator(
                                     GlobalSideEffect.Snackbar(
                                         message =
                                             StringValue.StringResource(
-                                                R.string.active_tunnel_updated
+                                                R.string.active_tunnel_updated,
                                             ),
                                         ToastType.Success,
-                                    )
+                                    ),
                                 )
                             }
                     }
@@ -186,7 +190,6 @@ class TunnelCoordinator(
         return runtimeSettingsSnapshotState.filterNotNull().first()
     }
 
-    private var lastActiveTunnels: List<Int> = emptyList()
     private val tunnelMutex = Mutex()
     private val _errors = MutableSharedFlow<TunnelErrorEvent>()
     val errors = _errors.asSharedFlow()
@@ -259,7 +262,7 @@ class TunnelCoordinator(
     ) {
 
         val snapshot = getSnapshot()
-        val settings = snapshot.general
+        var settings = snapshot.general
         val dnsSettings = snapshot.dns
         val proxySettings = snapshot.proxy
         val monitoringSettings = snapshot.monitoring
@@ -288,6 +291,8 @@ class TunnelCoordinator(
             if (policy.hasAnyOverrides) {
                 ConfigReconciler.reconcileConfig(config, globalConfig, policy)
             } else config
+
+        settings = strictSplitDefaults.beforeStart(settings, runConfig)
 
         val tunnelDnsConfig = dnsSettings.toTunnelDnsConfigOrNull(runConfig)
         val outerConfig = resolveOuterConfig(tunnelConfig, globalConfig, policy)
@@ -333,10 +338,10 @@ class TunnelCoordinator(
             )
             .onSuccess {
                 _actions.emit(
-                    TunnelActionEvent.Started(tunnelId = tunnelConfig.id, source = source)
+                    TunnelActionEvent.Started(tunnelId = tunnelConfig.id, source = source),
                 )
                 replaceLastActiveTunnelIds(
-                    tunnelProvider.backendStatus.value.activeTunnels.keys + tunnelConfig.id
+                    tunnelProvider.backendStatus.value.activeTunnels.keys + tunnelConfig.id,
                 )
             }
             .onFailure {
@@ -398,12 +403,15 @@ class TunnelCoordinator(
      * Rebuild the kill-switch TUN in place. HEV is rebound to the new fd by VpnService using the
      * still-running SOCKS listener
      */
-    suspend fun applyLockdownSettings(settings: LockdownSettings) = tunnelMutex.withLock {
-        tunnelProvider
-            .setLockDown(settings)
-            .onFailure { Timber.e(it, "Failed to apply lockdown/kill-switch settings") }
-            .getOrThrow()
-    }
+    // Not cancellable so leaving the screen mid rebuild left a new TUN without HEV rebound
+    suspend fun applyLockdownSettings(settings: LockdownSettings): Result<Unit> =
+        withContext(NonCancellable) {
+            tunnelMutex.withLock {
+                tunnelProvider.setLockDown(settings).onFailure {
+                    Timber.e(it, "Failed to apply lockdown/kill-switch settings")
+                }
+            }
+        }
 
     suspend fun toggleTunnel(
         tunnelConfig: TunnelConfig,
@@ -431,8 +439,6 @@ class TunnelCoordinator(
 
             val active = tunnelProvider.backendStatus.value.activeTunnels
             if (active.isNotEmpty()) {
-                lastActiveTunnels = active.keys.toList()
-
                 active.keys.forEach { id ->
                     _actions.emit(TunnelActionEvent.Stopped(tunnelId = id, source = source))
                 }
@@ -441,19 +447,24 @@ class TunnelCoordinator(
                 return@withLock
             }
 
-            val tunnelsToStart =
-                when {
-                    lastActiveTunnels.isNotEmpty() -> {
-                        lastActiveTunnels.mapNotNull { tunnelRepository.getById(it) }
-                    }
-
-                    else -> {
-                        tunnelRepository.getDefaultTunnel()?.let(::listOf) ?: emptyList()
-                    }
-                }
-
-            tunnelsToStart.forEach { startTunnelInternal(it, source) }
+            quickStartTunnels().forEach { startTunnelInternal(it, source) }
         }
+
+    suspend fun quickStart(source: TunnelActionSource = TunnelActionSource.USER) =
+        tunnelMutex.withLock {
+            bootstrapCoordinator.isReady.first { it }
+            if (tunnelProvider.backendStatus.value.activeTunnels.isNotEmpty()) return@withLock
+            if (source == TunnelActionSource.USER) {
+                markUserOverride()
+            }
+            quickStartTunnels().forEach { startTunnelInternal(it, source) }
+        }
+
+    suspend fun quickStartTunnels(): List<TunnelConfig> =
+        appStateRepository
+            .getLastUsedTunnelIds()
+            .mapNotNull { tunnelRepository.getById(it) }
+            .ifEmpty { listOfNotNull(tunnelRepository.getDefaultTunnel()) }
 
     private suspend fun stopTunnelInternal(id: Int, source: TunnelActionSource) {
         tunnelProvider
@@ -461,7 +472,7 @@ class TunnelCoordinator(
             .onSuccess {
                 _actions.emit(TunnelActionEvent.Stopped(tunnelId = id, source = source))
                 replaceLastActiveTunnelIds(
-                    tunnelProvider.backendStatus.value.activeTunnels.keys - id
+                    tunnelProvider.backendStatus.value.activeTunnels.keys - id,
                 )
             }
             .onFailure { _errors.emit(TunnelErrorEvent.from(it, id)) }
@@ -488,6 +499,7 @@ class TunnelCoordinator(
             appStateRepository.clearLastActiveTunnelIds()
         } else {
             appStateRepository.setLastActiveTunnelIds(ids.toList())
+            appStateRepository.setLastUsedTunnelIds(ids.toList())
         }
     }
 }

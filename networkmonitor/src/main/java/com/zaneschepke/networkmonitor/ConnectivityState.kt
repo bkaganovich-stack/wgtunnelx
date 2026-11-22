@@ -14,7 +14,8 @@ data class ConnectivityState(
     val vpnState: VpnState,
     val effectiveDnsInfo: DnsInfo = DnsInfo(),
     val underlyingDnsInfo: DnsInfo = DnsInfo(),
-    val hasIpv6: Boolean = false,
+    // Null when the underlying network's link properties could not be read
+    val hasIpv6: Boolean? = null,
     val airplaneModeOn: Boolean = false,
 ) {
 
@@ -47,7 +48,7 @@ data class ConnectivityState(
     }
 
     private fun hasInternetCapability(
-        caps: NetworkCapabilities? = activeNetwork.capabilities
+        caps: NetworkCapabilities? = activeNetwork.capabilities,
     ): Boolean {
         if (caps == null) return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

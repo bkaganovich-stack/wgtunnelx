@@ -196,8 +196,8 @@
     <string name="auto_tunnel_running">自动隧道运行中</string>
     <string name="auto_tunnel_not_running">自动隧道未运行</string>
     <string name="tunnel_monitoring">隧道监控</string>
-    <string name="backup_success">成功备份：%1$s</string>
-    <string name="restore_success">成功恢复：%1$s</string>
+    <string name="backup_success">备份成功</string>
+    <string name="restore_success">恢复成功</string>
     <string name="restarting_app">正重启应用来应用更改…</string>
     <string name="restore_failed">未能从备份恢复。</string>
     <string name="backup_failed">创建备份失败。</string>
@@ -359,7 +359,6 @@
     <string name="tunnel_globals">全局隧道</string>
     <string name="screen_recording_protection">屏幕录制保护</string>
     <string name="security">安全</string>
-    <string name="ready">就绪</string>
     <string name="statistics">统计数据</string>
     <string name="tunnel_statistics">实时隧道统计</string>
     <string name="refresh_rate">统计刷新率</string>

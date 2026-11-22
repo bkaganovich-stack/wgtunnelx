@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,12 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -50,6 +53,8 @@ fun SurfaceRow(
     selected: Boolean = false,
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable ((Modifier) -> Unit)? = null,
+    trailingOutsideClickTarget: Boolean = false,
+    requestInitialFocus: Boolean = false,
 ) {
     val density = LocalDensity.current
     val isTv = LocalIsAndroidTV.current
@@ -57,15 +62,44 @@ fun SurfaceRow(
     val interactionSource = remember { MutableInteractionSource() }
     val mainFocusRequester = remember { FocusRequester() }
     val trailingFocusRequester = remember { FocusRequester() }
+    if (requestInitialFocus && isTv) {
+        LaunchedEffect(Unit) { mainFocusRequester.requestFocus() }
+    }
+
+    val trailingFirst = isTv && trailingOutsideClickTarget && trailing != null
+    val trailingModifier =
+        Modifier.focusRequester(trailingFocusRequester).focusProperties {
+            if (onClick != null) {
+                left = mainFocusRequester
+            }
+            if (trailingFirst) right = FocusRequester.Cancel
+        }
 
     Column(
         modifier =
             modifier
+                .then(
+                    if (trailingFirst) {
+                        Modifier.focusProperties {
+                                onEnter = {
+                                    if (
+                                        requestedFocusDirection == FocusDirection.Up ||
+                                            requestedFocusDirection == FocusDirection.Down
+                                    ) {
+                                        trailingFocusRequester.requestFocus()
+                                    }
+                                }
+                            }
+                            .focusGroup()
+                    } else {
+                        Modifier
+                    },
+                )
                 .fillMaxWidth()
                 .indication(interactionSource, ripple())
                 .background(
                     if (!selected) MaterialTheme.colorScheme.surface
-                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 )
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .defaultMinSize(minHeight = 42.dp)
@@ -79,7 +113,8 @@ fun SurfaceRow(
         ) {
             Row(
                 modifier =
-                    Modifier.onKeyEvent { event ->
+                    Modifier.weight(1f)
+                        .onKeyEvent { event ->
                             if (onLongClick == null || isTv) {
                                 if (
                                     event.key == Key.DirectionCenter &&
@@ -126,7 +161,7 @@ fun SurfaceRow(
                         modifier =
                             Modifier.onSizeChanged {
                                 leadingPadding = with(density) { it.width.toDp() }
-                            }
+                            },
                     ) {
                         leading()
                         Spacer(modifier = Modifier.width(16.dp))
@@ -145,15 +180,12 @@ fun SurfaceRow(
                         description()
                     }
                 }
-                if (trailing != null) {
-                    trailing(
-                        Modifier.focusRequester(trailingFocusRequester).focusProperties {
-                            if (onClick != null) {
-                                left = mainFocusRequester
-                            }
-                        }
-                    )
+                if (trailing != null && !trailingOutsideClickTarget) {
+                    trailing(trailingModifier)
                 }
+            }
+            if (trailing != null && trailingOutsideClickTarget) {
+                trailing(trailingModifier)
             }
         }
         if (expandedContent != null) {
@@ -176,6 +208,8 @@ fun SurfaceRow(
     selected: Boolean = false,
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable ((Modifier) -> Unit)? = null,
+    trailingOutsideClickTarget: Boolean = false,
+    requestInitialFocus: Boolean = false,
 ) {
     SurfaceRow(
         title = AnnotatedString(title),
@@ -187,6 +221,8 @@ fun SurfaceRow(
         selected = selected,
         leading = leading,
         trailing = trailing,
+        trailingOutsideClickTarget = trailingOutsideClickTarget,
+        requestInitialFocus = requestInitialFocus,
         modifier = modifier,
     )
 }

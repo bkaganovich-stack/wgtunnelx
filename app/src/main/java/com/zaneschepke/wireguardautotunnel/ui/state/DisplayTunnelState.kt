@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import com.wgtunnel.backend.Tunnel
-import com.wgtunnel.backend.model.BackendMode
 import com.wgtunnel.backend.state.ActiveTunnel
 import com.wgtunnel.backend.state.BootstrapState
 import com.zaneschepke.wireguardautotunnel.R
@@ -20,8 +19,6 @@ sealed class DisplayTunnelState {
 
     data object EstablishingConnection : DisplayTunnelState()
 
-    data object Ready : DisplayTunnelState()
-
     data object Connected : DisplayTunnelState()
 
     data object HandshakeFailure : DisplayTunnelState()
@@ -32,7 +29,6 @@ sealed class DisplayTunnelState {
             Disconnected -> R.string.tunnel_state_disconnected
             EstablishingConnection -> R.string.tunnel_state_establishing_connection
             ResolvingDns -> R.string.tunnel_state_resolving_dns
-            Ready -> R.string.ready
             Connected -> R.string.tunnel_state_connected
             HandshakeFailure -> R.string.tunnel_state_handshake_failure
         }
@@ -41,8 +37,7 @@ sealed class DisplayTunnelState {
         when (this) {
             Disconnected -> CoolGray
             ResolvingDns,
-            EstablishingConnection,
-            Ready -> Straw
+            EstablishingConnection -> Straw
             Connected -> SilverTree
             HandshakeFailure -> AlertRed
         }
@@ -55,8 +50,6 @@ sealed class DisplayTunnelState {
         fun from(activeTunnel: ActiveTunnel): DisplayTunnelState {
             val transport = activeTunnel.transportState
             val bootstrap = activeTunnel.bootstrapState
-            val mode = activeTunnel.mode
-            val isVpnStyle = mode is BackendMode.Vpn || mode is BackendMode.Proxy.KillSwitchPrimary
 
             return when {
                 transport is Tunnel.State.Down -> Disconnected
@@ -69,10 +62,7 @@ sealed class DisplayTunnelState {
 
                 transport is Tunnel.State.Up.HandshakeFailure -> HandshakeFailure
 
-                transport is Tunnel.State.Starting ->
-                    if (isVpnStyle) EstablishingConnection else Ready
-
-                else -> if (isVpnStyle) EstablishingConnection else Ready
+                else -> EstablishingConnection
             }
         }
     }

@@ -20,6 +20,7 @@ fun AnimatedFloatIcon(
     inactiveIcon: ImageVector,
     activeIcon: ImageVector,
     isSelected: Boolean,
+    contentDescription: String?,
     modifier: Modifier,
 ) {
 
@@ -37,7 +38,7 @@ fun AnimatedFloatIcon(
         selected ->
         Icon(
             imageVector = if (selected) activeIcon else inactiveIcon,
-            contentDescription = null,
+            contentDescription = contentDescription,
             modifier = modifier.scale(scale).rotate(rotation),
         )
     }

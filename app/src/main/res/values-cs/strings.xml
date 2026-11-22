@@ -199,8 +199,8 @@
     <string name="auto_tunnel_running">Automatický tunel je spuštěn</string>
     <string name="auto_tunnel_not_running">Automatický tunel není spuštěn</string>
     <string name="tunnel_monitoring">Monitorování tunelu</string>
-    <string name="backup_success">Úspěšně zazálohováno. %1$s</string>
-    <string name="restore_success">Úspěšně obnoveno. %1$s</string>
+    <string name="backup_success">Úspěšně zazálohováno.</string>
+    <string name="restore_success">Úspěšně obnoveno.</string>
     <string name="restarting_app">Restartování aplikace pro použití změn…</string>
     <string name="restore_failed">Obnovení ze zálohy se nepodařilo.</string>
     <string name="backup_failed">Nepodařilo se vytvořit zálohu.</string>
@@ -363,7 +363,6 @@
     <string name="tunnel_globals">Globální nastavení tunelu </string>
     <string name="screen_recording_protection">Ochrana proti nahrávání obrazovky</string>
     <string name="security">Bezpečnost </string>
-    <string name="ready">Připraveno </string>
     <string name="statistics">Statistiky </string>
     <string name="tunnel_statistics">Statistiky tunelu v reálném čase</string>
     <string name="refresh_rate">Frekvence aktualizace statistik</string>

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.dokar.sonner.ToastType
@@ -51,13 +53,13 @@ fun LogsScreen(
 
     LaunchedEffect(isAutoScrolling) {
         if (isAutoScrolling) {
-            lazyColumnListState.animateScrollToItem(loggerState.messages.size)
+            lazyColumnListState.scrollToItem(loggerState.messages.size)
         }
     }
 
     LaunchedEffect(loggerState.messages.size) {
         if (isAutoScrolling) {
-            lazyColumnListState.animateScrollToItem(loggerState.messages.size)
+            lazyColumnListState.scrollToItem(loggerState.messages.size)
         }
     }
 
@@ -109,7 +111,9 @@ fun LogsScreen(
         label = "LogsContentTransition",
     ) { isEmpty ->
         if (isEmpty) {
-            EmptyStateLottie(message = stringResource(R.string.no_tunnels_yet))
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyStateLottie(message = stringResource(R.string.no_tunnels_yet))
+            }
         } else {
             LogList(
                 logs = loggerState.messages,
