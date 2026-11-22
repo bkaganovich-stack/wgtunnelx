@@ -1,6 +1,7 @@
 package com.wgtunnelx.xray
 
 import com.wgtunnelx.xray.config.SessionParams
+import com.wgtunnelx.xray.config.StrictSplit
 import com.wgtunnelx.xray.config.XrayConfigBuilder
 import com.wgtunnelx.xray.model.DnsOptions
 import com.wgtunnelx.xray.model.RoutingPresets
@@ -66,9 +67,29 @@ class ConfigDumpTest {
                             network = "tcp,udp",
                             protocols = listOf("tls", "quic"),
                             packages = listOf("org.example"),
-                        )
+                        ),
                     ),
             )
         File(dir, "all-fields.json").writeText(XrayConfigBuilder.build(everything, params))
+        val preset = RoutingPresets.RUSSIA_DIRECT
+        val withApps =
+            RoutingSettings(
+                defaultTarget = preset.defaultTarget,
+                rules = everything.rules + preset.rules,
+            )
+        File(dir, "strict-exclude.json")
+            .writeText(
+                XrayConfigBuilder.build(
+                    withApps,
+                    params.copy(strictSplit = StrictSplit(StrictSplit.Mode.EXCLUDE, setOf(10300))),
+                ),
+            )
+        File(dir, "strict-include.json")
+            .writeText(
+                XrayConfigBuilder.build(
+                    withApps,
+                    params.copy(strictSplit = StrictSplit(StrictSplit.Mode.INCLUDE, setOf(10100))),
+                ),
+            )
     }
 }

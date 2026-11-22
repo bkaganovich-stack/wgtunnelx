@@ -13,6 +13,7 @@ import com.wgtunnelx.xray.XrayRouting
 import com.wgtunnelx.xray.config.RuleProblem
 import com.wgtunnelx.xray.config.RuleValidator
 import com.wgtunnelx.xray.config.SessionParams
+import com.wgtunnelx.xray.config.StrictSplit
 import com.wgtunnelx.xray.config.XrayConfigBuilder
 import com.wgtunnelx.xray.engine.EngineState
 import com.wgtunnelx.xray.engine.RoutingRequest
@@ -54,7 +55,8 @@ class RoutingTunnelProvider(
         routing.engine.alwaysOnHandler = { RuntimeManager.alwaysOnCallback?.alwaysOnTriggered() }
         routing.engine.revokeHandler = { id ->
             scope.launch {
-                Timber.tag(TAG).w("Routing ended on its own (revoke or crash), stopping tunnel %s", id)
+                Timber.tag(TAG)
+                    .w("Routing ended on its own (revoke or crash), stopping tunnel %s", id)
                 if (id != null) stopTunnel(id) else stopActiveTunnels()
             }
         }
@@ -85,7 +87,8 @@ class RoutingTunnelProvider(
     ): Result<Unit> = mutex.withLock {
         val settings = routing.store.current
         val routed = mode is BackendMode.Vpn && settings.appliesTo(tunnel.id)
-        Timber.tag(TAG).i("Starting tunnel %d (%s), routing=%s", tunnel.id, mode::class.simpleName, routed)
+        Timber.tag(TAG)
+            .i("Starting tunnel %d (%s), routing=%s", tunnel.id, mode::class.simpleName, routed)
         if (mode !is BackendMode.Vpn || !routed) {
             stopRoutingLocked()
             return@withLock delegate.startTunnel(tunnel, mode, tunnelDnsConfig, outerConfig)
@@ -122,14 +125,19 @@ class RoutingTunnelProvider(
                                 port = port,
                                 username = user,
                                 password = pass,
-                            )
+                            ),
                     ),
             )
         delegate.startTunnel(tunnel, proxyMode, tunnelDnsConfig, outerConfig).onFailure {
             return Result.failure(it)
         }
 
-        val params = sessionParams(config, port, user, pass, settings)
+        val params =
+            sessionParams(config, port, user, pass, settings)
+                .copy(strictSplit = strictSplit(tunnel.strictSplitTunnel, config))
+        if (params.strictSplit != null && settings.useCustomConfig) {
+            Timber.tag(TAG).w("Strict split tunneling is not added to a custom Xray config")
+        }
         val json = runCatching {
             XrayConfigBuilder.build(settings, params)
         }
@@ -146,6 +154,7 @@ class RoutingTunnelProvider(
                 includedApps = config.`interface`.allIncludedApps,
                 excludedApps = config.`interface`.allExcludedApps,
                 metered = tunnel.isMetered,
+                strictSplit = params.strictSplit != null && !settings.useCustomConfig,
                 configureIntent = appProvider.createVpnConfigurePendingIntent(context),
             )
         return routing.engine
@@ -215,6 +224,38 @@ class RoutingTunnelProvider(
         )
     }
 
+    /**
+     * Upstream strict split for a routed tunnel: the same apps as the VPN builder lets in or keeps
+     * out, by UID. Like upstream it needs Android 10 to look up the owner of a connection and is
+     * off below it, and off when the tunnel neither includes nor excludes apps.
+     */
+    private fun strictSplit(enabled: Boolean, config: Config): StrictSplit? {
+        if (!enabled) return null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Timber.tag(TAG).w("Strict split tunneling needs Android 10 or newer, skipping it")
+            return null
+        }
+        val self = context.packageName
+        val included = config.`interface`.allIncludedApps.filter { it != self }
+        val excluded = config.`interface`.allExcludedApps.filter { it != self }
+        val policy =
+            when {
+                included.isNotEmpty() ->
+                    StrictSplit(
+                        StrictSplit.Mode.INCLUDE,
+                        resolveUids(included.toSet()).values.toSet(),
+                    )
+                excluded.isNotEmpty() ->
+                    StrictSplit(
+                        StrictSplit.Mode.EXCLUDE,
+                        resolveUids(excluded.toSet()).values.toSet(),
+                    )
+                else -> null
+            }
+        Timber.tag(TAG).i("Strict split: %s", policy)
+        return policy
+    }
+
     private fun resolveUids(packages: Set<String>): Map<String, Int> {
         if (packages.isEmpty()) return emptyMap()
         // the owner of a connection can only be looked up from Android 10 on; without a UID the
@@ -236,7 +277,7 @@ class RoutingTunnelProvider(
                     }
                 }
                 .toMap()
-        Timber.tag(TAG).i("App rules: %s; not installed: %s", uids, missing)
+        Timber.tag(TAG).i("App UIDs: %s; not installed: %s", uids, missing)
         return uids
     }
 

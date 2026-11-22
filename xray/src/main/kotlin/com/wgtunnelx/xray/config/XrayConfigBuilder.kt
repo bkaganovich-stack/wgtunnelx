@@ -10,8 +10,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -113,13 +114,13 @@ object XrayConfigBuilder {
                     buildJsonObject {
                         put("tag", TAG_BLOCK)
                         put("protocol", "blackhole")
-                    }
+                    },
                 )
                 add(
                     buildJsonObject {
                         put("tag", TAG_DNS_OUT)
                         put("protocol", "dns")
-                    }
+                    },
                 )
             }
             put("dns", dnsObject(settings, activeRules, remoteDns, directDns, params))
@@ -129,14 +130,14 @@ object XrayConfigBuilder {
                         buildJsonObject {
                             put("ipPool", FAKE_IPV4_POOL)
                             put("poolSize", 65535)
-                        }
+                        },
                     )
                     if (params.tunnelHasIpv6) {
                         add(
                             buildJsonObject {
                                 put("ipPool", FAKE_IPV6_POOL)
                                 put("poolSize", 65535)
-                            }
+                            },
                         )
                     }
                 }
@@ -198,10 +199,10 @@ object XrayConfigBuilder {
                                 buildJsonObject {
                                     put("user", params.socksUser)
                                     put("pass", params.socksPass)
-                                }
+                                },
                             )
                         }
-                    }
+                    },
                 )
             }
         }
@@ -277,14 +278,71 @@ object XrayConfigBuilder {
         settings: RoutingSettings,
         rules: List<RoutingRule>,
         params: SessionParams,
-    ): JsonArray = buildJsonArray {
+    ): JsonArray {
+        val rules = baseRoutingRules(settings, rules, params)
+        val strict = params.strictSplit ?: return JsonArray(rules)
+        return JsonArray(
+            when (strict.mode) {
+                StrictSplit.Mode.EXCLUDE -> listOf(strictExcludeRule(strict)) + rules
+                StrictSplit.Mode.INCLUDE -> strictInclude(rules, strict)
+            },
+        )
+    }
+
+    const val STRICT_SPLIT_TAG = "strict split"
+
+    /**
+     * Refuses TUN connections of excluded apps and of owners that cannot be identified before any
+     * rule, DNS included, can answer them or send them into the tunnel.
+     */
+    private fun strictExcludeRule(strict: StrictSplit): JsonObject =
+        rule(TAG_BLOCK) {
+            putJsonArray("inboundTag") { add(JsonPrimitive(TAG_TUN)) }
+            val owners =
+                strict.uids.sorted().map { it.toString() } + StrictSplit.UNIDENTIFIED_OWNERS
+            put("process", JsonArray(owners.map(::JsonPrimitive)))
+            put("ruleTag", STRICT_SPLIT_TAG)
+        }
+
+    /**
+     * Xray rules cannot say "not these apps", so every rule that lets a TUN connection through is
+     * narrowed to the included UIDs, and whatever is left over is refused. An app rule keeps only
+     * its included apps and is dropped when none are left. Rules that only block stay as they are,
+     * and so do the rules for queries of Xray's own DNS module, which never come from an app.
+     */
+    private fun strictInclude(rules: List<JsonObject>, strict: StrictSplit): List<JsonObject> {
+        val allowed = strict.uids.sorted().map { it.toString() }
+        val internal = setOf(TAG_DNS_REMOTE, TAG_DNS_DIRECT)
+        val narrowed = rules.mapNotNull { r ->
+            val passes = r["outboundTag"]?.jsonPrimitive?.content != TAG_BLOCK
+            val inbound = r["inboundTag"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
+            if (!passes || inbound.isNotEmpty() && inbound.all { it in internal }) {
+                return@mapNotNull r
+            }
+            val own = r["process"]?.jsonArray?.map { it.jsonPrimitive.content }
+            val owners = own?.filter { it in allowed } ?: allowed
+            if (owners.isEmpty()) return@mapNotNull null
+            JsonObject(r + ("process" to JsonArray(owners.map(::JsonPrimitive))))
+        }
+        return narrowed +
+            rule(TAG_BLOCK) {
+                put("network", "tcp,udp")
+                put("ruleTag", STRICT_SPLIT_TAG)
+            }
+    }
+
+    private fun baseRoutingRules(
+        settings: RoutingSettings,
+        rules: List<RoutingRule>,
+        params: SessionParams,
+    ): List<JsonObject> = buildList {
         // every DNS query that reaches the TUN is answered by the DNS module
         add(
             buildJsonObject {
                 putJsonArray("inboundTag") { add(JsonPrimitive(TAG_TUN)) }
                 put("port", "53")
                 put("outboundTag", TAG_DNS_OUT)
-            }
+            },
         )
         add(rule(TAG_PROXY) { putJsonArray("inboundTag") { add(JsonPrimitive(TAG_DNS_REMOTE)) } })
         add(rule(TAG_DIRECT) { putJsonArray("inboundTag") { add(JsonPrimitive(TAG_DNS_DIRECT)) } })
@@ -315,7 +373,7 @@ object XrayConfigBuilder {
                 rule(TAG_BLOCK) {
                     put("network", "udp")
                     put("port", QUIC_PORT.toString())
-                }
+                },
             )
         }
 
@@ -346,14 +404,17 @@ object XrayConfigBuilder {
     }
 
     private fun portListHas(ports: String, port: Int): Boolean =
-        ports.split(',').map { it.trim() }.any { item ->
-            val range = item.split('-').map { it.trim().toIntOrNull() }
-            when (range.size) {
-                1 -> range[0] == port
-                2 -> range[0] != null && range[1] != null && port in range[0]!!..range[1]!!
-                else -> false
+        ports
+            .split(',')
+            .map { it.trim() }
+            .any { item ->
+                val range = item.split('-').map { it.trim().toIntOrNull() }
+                when (range.size) {
+                    1 -> range[0] == port
+                    2 -> range[0] != null && range[1] != null && port in range[0]!!..range[1]!!
+                    else -> false
+                }
             }
-        }
 
     internal fun toXrayRule(rule: RoutingRule, params: SessionParams): JsonObject? {
         val uids =
@@ -376,7 +437,7 @@ object XrayConfigBuilder {
 
     private fun strings(values: List<String>): JsonArray =
         JsonArray(
-            values.map { it.trim() }.filter { it.isNotEmpty() }.distinct().map(::JsonPrimitive)
+            values.map { it.trim() }.filter { it.isNotEmpty() }.distinct().map(::JsonPrimitive),
         )
 
     private inline fun rule(outbound: String, block: JsonObjectBuilder.() -> Unit): JsonObject =

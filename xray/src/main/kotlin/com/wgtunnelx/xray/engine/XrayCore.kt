@@ -15,6 +15,10 @@ internal class XrayCore(assetDir: String, private val connectivity: Connectivity
 
     private val controller: CoreController
 
+    /** Whether `process` rules can match, i.e. the owner of a TUN connection can be looked up. */
+    var findsOwners: Boolean = false
+        private set
+
     init {
         // geoip.dat / geosite.dat are looked up in assetDir
         Libv2ray.initCoreEnv(assetDir, "")
@@ -29,10 +33,11 @@ internal class XrayCore(assetDir: String, private val connectivity: Connectivity
                         Timber.tag(TAG).d("core status %d: %s", code, message)
                         return 0
                     }
-                }
+                },
             )
         if (connectivity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             controller.registerProcessFinder(UidFinder(connectivity))
+            findsOwners = true
         }
     }
 

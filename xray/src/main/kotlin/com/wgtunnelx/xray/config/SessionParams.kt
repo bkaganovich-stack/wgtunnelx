@@ -20,9 +20,30 @@ data class SessionParams(
     val mtu: Int = DEFAULT_MTU,
     /** Package name to UID for rules that match apps. */
     val packageUids: Map<String, Int> = emptyMap(),
+    /** Upstream strict split tunneling for this session, null when it is off. */
+    val strictSplit: StrictSplit? = null,
 ) {
     companion object {
         const val DEFAULT_MTU = 1500
         const val LOCALHOST = "127.0.0.1"
+    }
+}
+
+/**
+ * WG Tunnel's strict split tunneling (5.9.0), by app UID. The VPN builder already keeps apps out of
+ * the TUN, but an app can still bind a socket to the VPN network explicitly. Like upstream, a
+ * connection whose owner cannot be identified (UID -1 or root) is refused as well.
+ */
+data class StrictSplit(val mode: Mode, val uids: Set<Int>) {
+    enum class Mode {
+        /** Only these UIDs may use the tunnel (WireGuard `IncludedApplications`). */
+        INCLUDE,
+        /** These UIDs may not use the tunnel (WireGuard `ExcludedApplications`). */
+        EXCLUDE,
+    }
+
+    companion object {
+        /** Owner names AndroidLibXrayLite reports when the lookup fails (-1) or for root (0). */
+        val UNIDENTIFIED_OWNERS = listOf("-1", "0")
     }
 }
