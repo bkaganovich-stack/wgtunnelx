@@ -2,7 +2,7 @@
 
 **English** · [Русский](PLAN.ru.md)
 
-This document covers what the fork does and why, how it's built, where its weak spots are and what comes next. State as of October 25, 2026 (release 5.8.2-x.2); based on WG Tunnel 5.8.2 and Xray-core 26.10.21.
+This document covers what the fork does and why, how it's built, where its weak spots are and what comes next. State as of November 23, 2026 (release 5.9.1-x.2); based on WG Tunnel 5.9.1 and Xray-core 26.11.9.
 
 ## 1. Goal and scope
 
@@ -103,8 +103,8 @@ The mechanism was tested locally on synthetic releases: a changed and a new upst
 
 What was done and verified while building the fork:
 
-- unit tests for the `:xray` module (17 tests): rule order, DNS, fake DNS, per-app rules, custom config, validator, import/export, geo database reading;
-- **every preset and a config with every condition type pass `xray run -test` on Xray-core 26.10.21 with the real runetfreedom databases** — the same check CI runs before every release (`scripts/validate-xray-configs.sh`);
+- unit tests for the `:xray` module (30 tests): rule order, DNS, fake DNS, per-app rules, strict split, custom config, validator, import/export, geo database reading;
+- **every preset and a config with every condition type pass `xray run -test` on Xray-core 26.11.9 with the real runetfreedom databases** — the same check CI runs before every release (`scripts/validate-xray-configs.sh`);
 - preset categories were checked against the list of codes in the runetfreedom geosite/geoip files;
 - the `assembleStandaloneDebug` build and the signed `assembleStandaloneRelease` build with R8: gomobile classes are kept, the manifest contains the fork's service and Activity, applicationId is `com.wgtunnelx.android`, the authority is `wgtunnelx.provider` (no clash with the original), and there are no geo files in the APK.
 
@@ -116,6 +116,8 @@ What was done and verified while building the fork:
 - a normal stop takes about 50 ms;
 - after a force stop, the auto-tunnel service starts again as soon as the app is opened;
 - no Go runtime errors (`fatal error`) in the log.
+
+Before `5.9.1-x.2` shipped, strict split tunneling on a routed tunnel was checked on the same phone with a debug build and two probe apps ([details](https://github.com/bkaganovich-stack/wgtunnelx/pull/1)): the policy is built for excluded and for included apps, apps the VPN lets in keep working on direct and tunnel routes, and Xray blocked nothing during a minute of the whole phone's background traffic. Android 17 itself refuses an app outside the VPN binding to the VPN network, so the new block rules couldn't be exercised that way there.
 
 So far only one device has been tested. Runs on other Android versions are still planned (section 6, stage 1).
 
@@ -139,6 +141,9 @@ So far only one device has been tested. Runs on other Android versions are still
 Done:
 - the repository, secrets and automatic releases are set up;
 - `5.8.2-x.1` came out on October 23, 2026, and `5.8.2-x.2` on October 25 (Xray in a separate process, auto-tunnel watchdog, log entries with fixed tags);
+- `5.8.2-x.3` and `5.8.2-x.4` came out on October 26 (IPv6 the tunnel can't carry is refused, Telegram apps go through the tunnel; a routed tunnel stuck after a network change is restarted, QUIC is kept off the UDP relay), `5.8.2-x.5` on November 12 (new icon, Xray-core 26.10.31);
+- `5.9.1-x.1` came out on November 22, the first release on a new upstream version (WG Tunnel 5.9.1; 5.9.0 was skipped), with Xray-core 26.11.9;
+- `5.9.1-x.2` came out on November 22: upstream strict split tunneling also protects tunnels with domain routing;
 - a manual pass on a Pixel 11 Pro XL with Android 17 (section 4).
 
 Still to do:
