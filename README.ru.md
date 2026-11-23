@@ -5,7 +5,7 @@ WG Tunnel X
 
 <div align="center">
 
-Форк [WG Tunnel](https://github.com/wgtunnel/android) с раздельной маршрутизацией трафика по доменам, как в Xray, v2rayNG и v2RayTun.
+Форк [WG Tunnel](https://github.com/wgtunnel/android) с раздельной маршрутизацией трафика по доменам.
 
 **Русский** · [English](README.md)
 
