@@ -1,5 +1,6 @@
 name: x-release-notes
 # Updates the description of a published release from docs/release-notes/<version>.md (on main).
+# Also refreshes that release's CHANGELOG.md entry and pushes it to main.
 # Releases built after that file was committed get the section on their own (publish-release.sh).
 
 on:
@@ -22,5 +23,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          fetch-depth: 0
       - name: Update release description
         run: scripts/release-notes.sh "${{ inputs.version }}"
+      - name: Update changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          scripts/changelog.sh "$VERSION"
+          if ! git diff --quiet -- CHANGELOG.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -qm "docs: changelog for $VERSION" -- CHANGELOG.md
+            git push origin HEAD:main
+          fi

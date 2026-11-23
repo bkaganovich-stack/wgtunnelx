@@ -47,9 +47,18 @@ MD
 
 "$(dirname "$0")/release-notes.sh" "$VERSION" "$NOTES"
 
-# annotated tags need an identity even when no earlier step committed anything
+# the changelog commit and annotated tags need an identity even when no earlier step committed
 git config user.name >/dev/null || git config user.name "github-actions[bot]"
 git config user.email >/dev/null || git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+# the tag goes on the commit that has the release in CHANGELOG.md
+"$(dirname "$0")/changelog.sh" "$VERSION" "$UPSTREAM" "$XRAY"
+if ! git diff --quiet -- CHANGELOG.md; then
+  git add CHANGELOG.md
+  git commit -q -m "docs: changelog for $VERSION"
+  git push origin HEAD:main
+fi
+
 git tag -a "$VERSION" -m "WG Tunnel X $VERSION (upstream $UPSTREAM)"
 git push origin "refs/tags/$VERSION"
 gh release create "$VERSION" \

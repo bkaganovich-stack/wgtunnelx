@@ -18,7 +18,7 @@ WG Tunnel 5.9.1, Xray-core v26.11.9.
   - the quick settings tile and shortcut start the tunnels you used last;
   - Android TV navigation fixes, crash fixes, fixes for DNS and dual stack in proxy and lockdown modes.
 - Xray-core v26.11.9 (was v26.10.31).
-- Known limitation, fixed in 5.9.1-x.2: strict split tunneling didn't work for a tunnel with domain routing turned on.
+- Known limitation: strict split tunneling doesn't work yet for a tunnel with domain routing turned on, where Xray owns the VPN. It works as in WG Tunnel for every other tunnel.
 
 ## 5.8.2-x.5 — 2026-11-12
 
@@ -51,7 +51,9 @@ WG Tunnel 5.8.2, Xray-core v26.10.21.
 
 ## 5.8.2-x.1 — 2026-10-23
 
-WG Tunnel 5.8.2, Xray-core v26.10.21. First release.
+WG Tunnel 5.8.2, Xray-core v26.10.21.
+
+The first WG Tunnel X release.
 
 - Domain-based split routing powered by Xray-core: each connection goes to the tunnel, direct or is blocked, by domain (TLS SNI, HTTP Host and QUIC sniffing), `geosite:`/`geoip:` category, IP/CIDR, port, network, protocol or app.
 - Rule syntax as in Xray; import from v2rayNG custom routing and Xray configs, and export.
