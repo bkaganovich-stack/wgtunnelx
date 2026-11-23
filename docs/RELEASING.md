@@ -84,6 +84,29 @@ By default keytool creates a PKCS12 keystore, where the key password is the same
 
 The delay between an upstream release and the approval request is usually 15–30 minutes: GitHub may push scheduled runs back when it's under load.
 
+## Checking an upstream release locally
+
+Before approving the release job, you can run the same merge on your machine and build it. The script works on Linux and macOS and needs `git` with `user.name`/`user.email` set (it commits) and `python3`. Commit or set aside your changes to tracked files first: when hooks can't be applied, the script undoes the merge with `git reset --hard`.
+
+```sh
+git switch -c x/sync-X.Y.Z main
+scripts/upstream-sync.sh X.Y.Z
+echo $?    # 0: merged; 2: conflicts, the merge is undone
+```
+
+The script adds the `upstream` remote if it's missing, fetches the tag as `upstream/X.Y.Z` and makes two commits: "Merge upstream WG Tunnel X.Y.Z" and "chore(x): prepare X.Y.Z-x.1" (upstream workflows removed, hooks applied, `xRevision=1`). Only tracked files go into the commits, so untracked files in your working copy (logs, downloaded libraries) stay out. With exit code 2 nothing changes; merge by hand as described in the next section.
+
+The build needs the JDK version from `jdk` in `gradle/libs.versions.toml` and an Android SDK with the platform set by `compileSdk`/`compileSdkMinor` there; point Gradle at the SDK with `ANDROID_HOME` or `sdk.dir` in `local.properties`:
+
+```sh
+./gradlew :xray:testDebugUnitTest :app:assembleStandaloneDebug
+```
+
+To release your merge, fast-forward `main` to it and push. The release job then finds the upstream tag already merged and goes straight to the build. Two things to watch:
+
+- If a run for an earlier upstream version is still waiting for approval, cancel it (*Actions → the run → Cancel workflow*), so that only the latest version is released.
+- The release description carries only the notes of the upstream release it's built on. When an upstream version is skipped, summarize it in `docs/release-notes/X.Y.Z-x.1.md`.
+
 ## When something goes wrong
 
 The workflow opens an issue, and the repository owner sees it (with an email notification).
