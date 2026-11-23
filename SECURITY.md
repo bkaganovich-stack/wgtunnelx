@@ -10,7 +10,7 @@ Please don't open a public issue. Report it privately through GitHub instead: **
 
 Helpful details:
 
-- the WG Tunnel X version (for example, `5.8.2-x.2`), the device and the Android version;
+- the WG Tunnel X version (for example, `5.9.1-x.2`), the device and the Android version;
 - what an attacker can do and under what conditions;
 - steps to reproduce or a proof of concept;
 - logs, if they help. Remove private keys, server addresses and other personal data first.
@@ -20,6 +20,7 @@ Helpful details:
 This repository covers what the fork adds on top of WG Tunnel:
 
 - domain routing: the Xray-core integration, the `:xray` process and its VPN service, the routing rules and settings, geo database downloads;
+- strict split tunneling on tunnels with domain routing (since 5.9.1-x.2), where the fork's Xray config keeps apps outside the VPN away from the tunnel. Strict split on tunnels without routing is WG Tunnel's own;
 - the update check against this repository;
 - release builds, signing and the GitHub Actions automation.
 
