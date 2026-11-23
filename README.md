@@ -53,7 +53,7 @@ The tunnel is brought up by the stock WG Tunnel backend in userspace mode (the s
 
 ## Updates
 
-A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.9.1-x.2`: the WG Tunnel version (5.9.1) plus the fork revision (2). What changed in each release is in [CHANGELOG.md](CHANGELOG.md). To set this up in your own repository, see [docs/RELEASING.md](docs/RELEASING.md).
+A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.9.1-x.2`: the WG Tunnel version (5.9.1) plus the fork revision (2). Each release adds what changed in it to [CHANGELOG.md](CHANGELOG.md) by itself. To set this up in your own repository, see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Building
 
