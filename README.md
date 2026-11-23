@@ -5,7 +5,7 @@ WG Tunnel X
 
 <div align="center">
 
-A fork of [WG Tunnel](https://github.com/wgtunnel/android) that splits traffic by domain, the way Xray, v2rayNG and v2RayTun do.
+A fork of [WG Tunnel](https://github.com/wgtunnel/android) that splits traffic by domain.
 
 **English** · [Русский](README.ru.md)
 
