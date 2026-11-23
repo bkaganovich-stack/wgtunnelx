@@ -80,8 +80,11 @@ The hooks are idempotent. If a merge hits a conflict in one of these files, the 
 | --- | --- | --- |
 | `x-upstream-release` | cron every 15 min + manual | Fetches `releases/latest` from `wgtunnel/android` (this endpoint doesn't return drafts or pre-releases), checks the `X.Y.Z` format and whether a fork release already exists. Merges the tag, resolves conflicts by policy, builds, tests, publishes `X.Y.Z-x.1` |
 | `x-release` | manual | Releases fork changes without a new upstream: `xRevision + 1` |
+| `x-release-notes` | manual | Rewrites the "What's new" section of a published release from `docs/release-notes/<version>.md` and refreshes its `CHANGELOG.md` entry |
 | `x-update-xray` | weekly | Updates `libv2ray.aar` to the latest release, commits only if the tests and config validation pass |
 | `x-ci` | push / PR | Hooks in place, unit tests, config validation with a real Xray, debug build |
+
+**Changelog.** Both release workflows publish through `scripts/publish-release.sh`. Before tagging, it runs `scripts/changelog.sh`, which adds the release's entry to the top of `CHANGELOG.md` (date, WG Tunnel and Xray-core versions, the notes file as the list; without a notes file, a link to the WG Tunnel release) and pushes it to `main`, so the tag includes it. Run again for the same version, the script replaces the entry in place and keeps its date.
 
 **Conflict policy** (`scripts/resolve-upstream-conflicts.sh`):
 
@@ -144,6 +147,7 @@ Done:
 - `5.8.2-x.3` and `5.8.2-x.4` came out on October 26 (IPv6 the tunnel can't carry is refused, Telegram apps go through the tunnel; a routed tunnel stuck after a network change is restarted, QUIC is kept off the UDP relay), `5.8.2-x.5` on November 12 (new icon, Xray-core 26.10.31);
 - `5.9.1-x.1` came out on November 22, the first release on a new upstream version (WG Tunnel 5.9.1; 5.9.0 was skipped), with Xray-core 26.11.9;
 - `5.9.1-x.2` came out on November 22: upstream strict split tunneling also protects tunnels with domain routing;
+- `CHANGELOG.md` with every fork release, filled in by the releases themselves since November 23 (section 3);
 - a manual pass on a Pixel 11 Pro XL with Android 17 (section 4).
 
 Still to do:
