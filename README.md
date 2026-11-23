@@ -23,7 +23,7 @@ WG Tunnel X adds the [Xray-core](https://github.com/XTLS/Xray-core) engine on to
 
 The rule syntax is the same as in Xray: `domain:`, `full:`, `keyword:`, `regexp:`, `geosite:`, `geoip:`, `ext:`. You can import rules from v2rayNG (custom routing) and from Xray configs, and export them too.
 
-Everything else — AmneziaWG, auto-tunneling, Lockdown, proxy mode, tunnel recovery, tiles and integrations — works the same as in WG Tunnel. While routing is off, tunnels start exactly as they do in the original app.
+Everything else — AmneziaWG, auto-tunneling, Lockdown, proxy mode, tunnel recovery, tiles and integrations — works the same as in WG Tunnel. While routing is off, tunnels start exactly as they do in the original app. Strict split tunneling from WG Tunnel 5.9 (apps kept out of the VPN can't reach the tunnel to learn your server's IP) also protects tunnels with domain routing, since 5.9.1-x.2.
 
 ## How to use it
 
@@ -53,7 +53,7 @@ The tunnel is brought up by the stock WG Tunnel backend in userspace mode (the s
 
 ## Updates
 
-A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.8.3-x.1`: the WG Tunnel version plus the fork revision. To set this up in your own repository, see [docs/RELEASING.md](docs/RELEASING.md).
+A new WG Tunnel X build is put together and published automatically shortly after each stable WG Tunnel release. GitHub Actions checks upstream every 15 minutes, merges the release, runs the tests, validates the configs against a real Xray-core and ships signed APKs. Versions look like `5.9.1-x.2`: the WG Tunnel version (5.9.1) plus the fork revision (2). To set this up in your own repository, see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Building
 
