@@ -35,6 +35,8 @@ if ! python3 -I -B scripts/apply-hooks.py; then
   exit 2
 fi
 # a new upstream version restarts the fork revision
-sed -i 's/^xRevision=.*/xRevision=1/' wgtunnelx.properties
+# (no sed -i: GNU and BSD/macOS sed disagree on its argument)
+sed 's/^xRevision=.*/xRevision=1/' wgtunnelx.properties > wgtunnelx.properties.tmp
+mv wgtunnelx.properties.tmp wgtunnelx.properties
 git add -A
 git diff --cached --quiet || git commit -m "chore(x): prepare $TAG-x.1"
