@@ -38,5 +38,7 @@ fi
 # (no sed -i: GNU and BSD/macOS sed disagree on its argument)
 sed 's/^xRevision=.*/xRevision=1/' wgtunnelx.properties > wgtunnelx.properties.tmp
 mv wgtunnelx.properties.tmp wgtunnelx.properties
-git add -A
+# only tracked files change after the merge (hooks, xRevision; pruning stages itself), and -u
+# keeps untracked files of a local working copy out of the commit
+git add -u
 git diff --cached --quiet || git commit -m "chore(x): prepare $TAG-x.1"
